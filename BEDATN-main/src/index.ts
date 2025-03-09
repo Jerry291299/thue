@@ -228,58 +228,82 @@ app.put("/:id/cartupdate", async (req: Request, res: Response) => {
 });
 
 // app.post("/cart/add",checkUserActiveStatus,  async (req: Request, res: Response) => {
-app.post("/cart/add", async (req: Request, res: Response) => {
-  const { userId, items } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ message: "Invalid userId format" });
-  }
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: "Items array cannot be empty" });
-  }
-
-  const { productId, name, price, img, quantity, size } = items[0];
-
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    return res.status(400).json({ message: "Invalid productId format" });
-  }
-
-  if (quantity <= 0) {
-    return res.status(400).json({ message: "Quantity must be greater than 0" });
-  }
-
-  try {
-    let cart = await Cart.findOne({ userId });
-
-    if (cart) {
-      const productIndex = cart.items.findIndex(
-        (p) => p.productId.toString() === productId && p.size === size
-      );
-
-      if (productIndex > -1) {
-        return res.status(400).json({
-          message: "This product with the same size is already in the cart."
-        });
-      } else {
-        cart.items.push({ productId, name, price, img, quantity, size });
-      }
-
-      cart = await cart.save();
-      return res.status(200).json(cart);
-    } else {
-      const newCart = await Cart.create({
-        userId,
-        items: [{ productId, name, price, img, quantity, size }],
-      });
-
-      return res.status(201).json(newCart);
+  app.post("/cart/add", async (req: Request, res: Response) => {
+    const { userId, items } = req.body;
+  
+    // Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
     }
-  } catch (error: any) {
-    console.error("Error adding to cart:", error);
-    res.status(500).json({ message: "Error adding to cart", error: error.message });
-  }
-});
+  
+    // Validate items array
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Items array cannot be empty" });
+    }
+  
+    // Destructure the first item (assuming single item addition)
+    const { productId, name, price, img, quantity, color, subVariant } = items[0];
+  
+    // Validate productId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ message: "Invalid productId format" });
+    }
+  
+    // Validate quantity
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return res.status(400).json({ message: "Quantity must be a positive integer" });
+    }
+  
+    // Validate required fields
+    if (!name || !price || !img || !color) {
+      return res.status(400).json({ message: "Missing required fields: name, price, img, or color" });
+    }
+  
+    // Validate subVariant if provided
+    if (subVariant && (!subVariant.specification || !subVariant.value)) {
+      return res.status(400).json({ message: "SubVariant must include both specification and value" });
+    }
+  
+    try {
+      let cart = await Cart.findOne({ userId });
+  
+      if (cart) {
+        // Check for existing item with same productId, color, and subVariant
+        const productIndex = cart.items.findIndex((p) => {
+          const sameProduct = p.productId.toString() === productId;
+          const sameColor = p.color === color;
+          const sameSubVariant =
+            subVariant && p.subVariant
+              ? p.subVariant.specification === subVariant.specification &&
+                p.subVariant.value === subVariant.value
+              : !subVariant && !p.subVariant; // Both null/undefined
+          return sameProduct && sameColor && sameSubVariant;
+        });
+  
+        if (productIndex > -1) {
+          return res.status(400).json({
+            message: "This product with the same color and sub-variant is already in the cart.",
+          });
+        } else {
+          cart.items.push({ productId, name, price, img, quantity, color, subVariant });
+        }
+  
+        cart = await cart.save();
+        return res.status(200).json(cart);
+      } else {
+        // Create new cart if none exists
+        const newCart = await Cart.create({
+          userId,
+          items: [{ productId, name, price, img, quantity, color, subVariant }],
+        });
+  
+        return res.status(201).json(newCart);
+      }
+    } catch (error: any) {
+      console.error("Error adding to cart:", error);
+      res.status(500).json({ message: "Error adding to cart", error: error.message });
+    }
+  });
 
 
 app.delete("/cart/remove", async (req: Request, res: Response) => {
@@ -1147,11 +1171,11 @@ router.post("/api/orders", async (req: Request, res: Response) => {
       }
 
       // Tìm kiếm biến thể tương ứng trong mảng variants
-      const variant = product.variants.find((v) => v.size === item.size);
+      const variant = product.variants.find((v) => v.color === item.color);
 
       if (!variant || variant.quantity < item.quantity) {
         return res.status(400).json({
-          message: `Không đủ số lượng sản phẩm ${item.name} (${item.size}) trong kho.`,
+          message: `Không đủ số lượng sản phẩm ${item.name} (${item.color}) trong kho.`,
         });
       }
 
@@ -1542,7 +1566,7 @@ app.post("/order/confirm", async (req: Request, res: Response) => {
     // Chuẩn bị thông tin sản phẩm cho email
     const productDetailsHtml = items.map((item: ICartItem) => {
       const variantInfo = `
-        <p>Kích thước: ${item.size}</p>
+        <p>Màu sắc: ${item.color}</p>
         <p>Giá: ${(item.price).toFixed(0)} VND</p>
         
       ` ;
@@ -1812,11 +1836,10 @@ app.put("/api/products/:productId", async (req: Request, res: Response) => {
     }
 
     console.log(product, "product");
-    console.log(size, "size");
     
     
     // Find the corresponding variant in the variants array
-    const variant = product.variants.find((v) => v.size === size);
+    const variant = product.variants.find((v) => v.color === size);
     if (!variant) {
       return res.status(404).json({ message: "Variant not found" });
     }

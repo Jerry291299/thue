@@ -51,7 +51,7 @@ const ProductView = () => {
 
   // Calculate total price after discount
   const totalPrice = (product.variants || []).reduce((total, variant) => {
-    const priceAfterDiscount = variant.price - (variant.discount || 0);
+    const priceAfterDiscount = variant.basePrice - (variant.discount || 0);
     return total + priceAfterDiscount;
   }, 0);
 
@@ -70,7 +70,7 @@ const ProductView = () => {
         {product.variants && product.variants.length > 0 ? (
           product.variants.map((variant, index) => {
             // Calculate price after discount for the current variant
-            const priceAfterDiscount = variant.price - (variant.discount || 0);
+            const priceAfterDiscount = variant.basePrice - (variant.discount || 0);
             return (
               <div key={index} className="border p-4 mb-2 rounded">
                 <p>
@@ -84,7 +84,7 @@ const ProductView = () => {
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",
                     currency: "VND",
-                  }).format(variant.price)}
+                  }).format(variant.basePrice)}
                 </p>
                 {variant.discount ? (
                   <p>

@@ -83,8 +83,8 @@ const Productspage = (props: Props) => {
   );
 
   const sortedProducts = [...filterProduct].sort((a, b) => {
-    const aPrices = a.variants?.map((variant) => variant.price) || [];
-    const bPrices = b.variants?.map((variant) => variant.price) || [];
+    const aPrices = a.variants?.map((variant) => variant.basePrice) || [];
+    const bPrices = b.variants?.map((variant) => variant.basePrice) || [];
 
     const aMaxPrice = aPrices.length > 0 ? Math.max(...aPrices) : -Infinity;
     const bMaxPrice = bPrices.length > 0 ? Math.max(...bPrices) : -Infinity;
@@ -193,7 +193,7 @@ const Productspage = (props: Props) => {
                         currency: "VND",
                       }).format(
                         product.variants && product.variants.length > 0
-                          ? product.variants[0].price
+                          ? product.variants[0].basePrice
                           : 0
                       )}
                     </p>

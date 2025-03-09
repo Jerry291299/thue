@@ -4,7 +4,7 @@ export interface IVariant {
   size: string;
   color: string;
   quantity: number;
-  price: number;
+  basePrice: number;
   discount?: number;
   
 }

@@ -74,7 +74,7 @@ const Content = (props: Props) => {
                     currency: "VND",
                   }).format(
                     product.variants && product.variants.length > 0
-                      ? product.variants[0].price
+                      ? product.variants[0].basePrice
                       : 0
                   )}
                 </p>

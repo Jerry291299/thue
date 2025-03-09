@@ -112,7 +112,7 @@ const ProductUpdate = () => {
   };
 
   const addVariant = () => {
-    setVariants((prev) => [...prev, { size: "",color: "", quantity: 0, price: 0 }]);
+    setVariants((prev) => [...prev, { size: "",color: "", quantity: 0, basePrice: 0 }]);
   };
 
   const removeVariant = (index: number) => {
@@ -121,7 +121,7 @@ const ProductUpdate = () => {
   const calculateTotalPrice = () => {
     const total = variants.reduce((acc, variant) => {
       const discountAmount = variant.discount || 0;
-      const effectivePrice = variant.price - discountAmount;
+      const effectivePrice = variant.basePrice - discountAmount;
       return acc + (effectivePrice > 0 ? effectivePrice : 0) * variant.quantity;
     }, 0);
     setTotalPrice(total);
@@ -150,8 +150,8 @@ const ProductUpdate = () => {
       }
     } else if (key === "quantity" && typeof value === "number") {
       newVariants[index][key] = value as IVariant["quantity"];
-    } else if (key === "price" && typeof value === "number") {
-      newVariants[index][key] = value as IVariant["price"];
+    } else if (key === "basePrice" && typeof value === "number") {
+      newVariants[index][key] = value as IVariant["basePrice"];
     } else if (
       key === "discount" &&
       (typeof value === "number" || value === undefined)
@@ -380,9 +380,9 @@ const ProductUpdate = () => {
                 <Input
                   type="number"
                   placeholder="Giá"
-                  value={variant.price}
+                  value={variant.basePrice}
                   onChange={(e) =>
-                    handleVariantChange(index, "price", Number(e.target.value))
+                    handleVariantChange(index, "basePrice", Number(e.target.value))
                   }
                   className="w-1/4 p-4 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
                 />

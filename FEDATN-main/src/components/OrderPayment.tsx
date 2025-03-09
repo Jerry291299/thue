@@ -9,6 +9,7 @@ import { createVNPayPayment } from "../service/payment";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import { Color } from "antd/es/color-picker";
 
 function OrderPayment() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -193,7 +194,7 @@ const [discount, setDiscount] = useState<number>(0);
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                  quantity: item.quantity,
-                 size: item.size,
+                 Color: item.color,
                 }), // Gửi số lượng đặt
             }
           );
@@ -372,7 +373,7 @@ const [discount, setDiscount] = useState<number>(0);
                 />
                 <span>{item.name}</span>
               </div>
-              <div className="px-[10px]">{item.size}</div>
+             
               <span className="font-semibold">
                 {new Intl.NumberFormat("vi-VN", {
                   style: "currency",

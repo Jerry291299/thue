@@ -9,7 +9,6 @@ export interface SubVariant {
 }
 
 export interface Variant {
-  size: string;
   color: string;
   basePrice: number;
   discount: number;
@@ -38,7 +37,7 @@ const SubVariantSchema: Schema = new Schema({
 });
 
 const VariantSchema: Schema = new Schema({
-  size: { type: String, required: true },
+  
   color: { type: String, required: true },
   basePrice: { type: Number, required: true },
   discount: { type: Number, default: 0 },
@@ -63,10 +62,10 @@ const ProductSchema: Schema = new Schema(
 export function checkDuplicateVariants(variants: Variant[]): Error | null {
   const variantSet = new Set();
   for (const variant of variants) {
-    const variantKey = `${variant.size}-${variant.color}`;
+    const variantKey = `${variant.color}`;
     if (variantSet.has(variantKey)) {
       return new Error(
-        `Có biến thể trùng lặp trong sản phẩm: Size: ${variant.size}, Color: ${variant.color}`
+        `Có biến thể trùng lặp trong sản phẩm: Color: ${variant.color}`
       );
     }
     variantSet.add(variantKey);
@@ -77,7 +76,7 @@ export function checkDuplicateVariants(variants: Variant[]): Error | null {
       const subKey = `${subVariant.specification}-${subVariant.value}`;
       if (subVariantSet.has(subKey)) {
         return new Error(
-          `Có sub-variant trùng lặp trong ${variant.size}-${variant.color}: ${subVariant.specification}-${subVariant.value}`
+          `Có sub-variant trùng lặp trong ${variant.color}: ${subVariant.specification}-${subVariant.value}`
         );
       }
       subVariantSet.add(subKey);

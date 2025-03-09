@@ -246,7 +246,7 @@ const Cart = () => {
                           </div>
                         </td>
                         <td className="p-4 text-gray-700 font-medium">{item.name}</td>
-                        <td className="p-4 text-gray-700 font-medium">{item.size}</td>
+                        <td className="p-4 text-gray-700 font-medium">{item.color}</td>
                         <td className="p-4">
                           <div className="flex items-center gap-3">
                             <button

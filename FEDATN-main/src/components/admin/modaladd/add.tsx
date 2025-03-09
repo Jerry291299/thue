@@ -7,7 +7,7 @@ import { upload } from "../../../service/upload";
 import LoadingComponent from "../../Loading";
 import { useNavigate } from "react-router-dom";
 
-// Define types matching your new schema
+// Define types matching your updated requirements
 type SubVariant = {
   specification: string; // e.g., "Storage"
   value: string; // e.g., "128GB"
@@ -16,11 +16,9 @@ type SubVariant = {
 };
 
 type Variant = {
-  size: string;
   color: string;
   basePrice: number;
   discount?: number;
-  quantity: number;
   subVariants: SubVariant[];
 };
 
@@ -32,11 +30,9 @@ const Add = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [variants, setVariants] = useState<Variant[]>([
     {
-      size: "",
       color: "",
       basePrice: 0,
       discount: undefined,
-      quantity: 0,
       subVariants: [{ specification: "", value: "", additionalPrice: 0, quantity: 0 }],
     },
   ]);
@@ -118,7 +114,7 @@ const Add = () => {
           (sv) => sv.specification && sv.value && sv.quantity > 0 && sv.additionalPrice >= 0
         ),
       })).filter(
-        (variant) => variant.size && variant.color && variant.basePrice > 0 && variant.quantity > 0
+        (variant) => variant.color && variant.basePrice > 0
       );
 
       if (validVariants.length === 0 || validVariants.some((v) => v.subVariants.length === 0)) {
@@ -149,7 +145,7 @@ const Add = () => {
       form.resetFields();
       setFiles([]);
       setPreviews([]);
-      setVariants([{ size: "", color: "", basePrice: 0, discount: undefined, quantity: 0, subVariants: [{ specification: "", value: "", additionalPrice: 0, quantity: 0 }] }]);
+      setVariants([{ color: "", basePrice: 0, discount: undefined, subVariants: [{ specification: "", value: "", additionalPrice: 0, quantity: 0 }] }]);
     } catch (error) {
       console.error("Error adding product:", error);
       showNotification("error", "Lỗi", "Không thể thêm sản phẩm, vui lòng thử lại!");
@@ -165,9 +161,9 @@ const Add = () => {
 
   const handleVariantChange = (index: number, field: keyof Variant, value: string | number | undefined) => {
     const updatedVariants = [...variants];
-    if (field === "size" || field === "color") {
+    if (field === "color") {
       updatedVariants[index][field] = value as string;
-    } else if (field === "basePrice" || field === "quantity") {
+    } else if (field === "basePrice") {
       updatedVariants[index][field] = value as number;
     } else if (field === "discount") {
       updatedVariants[index][field] = value as number | undefined;
@@ -195,7 +191,7 @@ const Add = () => {
   const addVariant = () => {
     setVariants((prev) => [
       ...prev,
-      { size: "", color: "", basePrice: 0, discount: undefined, quantity: 0, subVariants: [{ specification: "", value: "", additionalPrice: 0, quantity: 0 }] },
+      { color: "", basePrice: 0, discount: undefined, subVariants: [{ specification: "", value: "", additionalPrice: 0, quantity: 0 }] },
     ]);
   };
 
@@ -281,15 +277,7 @@ const Add = () => {
             <h3 className="text-lg font-semibold text-gray-800">Biến thể sản phẩm</h3>
             {variants.map((variant, variantIndex) => (
               <div key={variantIndex} className="mb-6 border p-4 rounded-lg">
-                <div className="grid grid-cols-6 gap-4 mb-4 items-center">
-                  <Form.Item name={`size-${variantIndex}`} rules={[{ required: true, message: "Vui lòng nhập kích thước!" }]}>
-                    <Input
-                      placeholder="Kích thước"
-                      value={variant.size}
-                      onChange={(e) => handleVariantChange(variantIndex, "size", e.target.value)}
-                      className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
-                    />
-                  </Form.Item>
+                <div className="grid grid-cols-4 gap-4 mb-4 items-center">
                   <Select
                     placeholder="Chọn màu"
                     value={variant.color}
@@ -321,21 +309,12 @@ const Add = () => {
                       className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
                     />
                   </Form.Item>
-                  <Form.Item name={`quantity-${variantIndex}`} rules={[{ required: true, message: "Vui lòng nhập số lượng!" }]}>
-                    <Input
-                      type="number"
-                      placeholder="Tổng số lượng"
-                      value={variant.quantity}
-                      onChange={(e) => handleVariantChange(variantIndex, "quantity", e.target.value === "" ? 0 : Number(e.target.value))}
-                      className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
-                    />
-                  </Form.Item>
                   <button type="button" onClick={() => removeVariant(variantIndex)} className="bg-red-600 text-white h-12 rounded-lg px-4">Xóa</button>
                 </div>
 
                 {/* Sub-Variants */}
                 <div className="ml-4">
-                  <h4 className="text-md font-medium text-gray-700">Sub-Variants</h4>
+                  <h4 className="text-md font-medium text-gray-700">Biến thể con:</h4>
                   {variant.subVariants.map((subVariant, subIndex) => (
                     <div key={subIndex} className="grid grid-cols-5 gap-4 mb-2 items-center">
                       <Form.Item name={`specification-${variantIndex}-${subIndex}`} rules={[{ required: true, message: "Vui lòng nhập thông số!" }]}>

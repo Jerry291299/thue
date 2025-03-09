@@ -125,14 +125,14 @@ const Dashboard = (props: Props) => {
     // Sort by price
     if (priceFilterOption === "asc") {
       filtered.sort((a, b) => {
-        const aPrice = a.variants?.[0]?.price || 0;
-        const bPrice = b.variants?.[0]?.price || 0;
+        const aPrice = a.variants?.[0]?.basePrice || 0;
+        const bPrice = b.variants?.[0]?.basePrice || 0;
         return aPrice - bPrice;
       });
     } else if (priceFilterOption === "desc") {
       filtered.sort((a, b) => {
-        const aPrice = a.variants?.[0]?.price || 0;
-        const bPrice = b.variants?.[0]?.price || 0;
+        const aPrice = a.variants?.[0]?.basePrice || 0;
+        const bPrice = b.variants?.[0]?.basePrice || 0;
         return bPrice - aPrice;
       });
     } else if (priceFilterOption === "newest") {
@@ -166,7 +166,7 @@ const Dashboard = (props: Props) => {
     "Tên sản phẩm": products.name,
     "Gía sản phẩm":
       products.variants && products.variants.length > 0
-        ? products.variants[0].price
+        ? products.variants[0].basePrice
         : 0, // Truy cập giá từ biến thể đầu tiên
     "Tên danh mục": products.category.name,
     "Số lượng sản phẩm": calculateTotalQuantity(products.variants),
@@ -285,7 +285,7 @@ const Dashboard = (props: Props) => {
                             currency: "VND",
                           }).format(
                             product.variants && product.variants.length > 0
-                              ? product.variants[0].price
+                              ? product.variants[0].basePrice
                               : 0
                           )}
                         </td>
