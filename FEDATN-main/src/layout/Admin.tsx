@@ -2,7 +2,7 @@ import React from "react";
 import Navbar from "../components/admin/Navbar";
 import Dashboard from "../components/admin/Dashboard";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
-import AdminDashboard from "../components/admin/AdminDashboard";
+// import AdminDashboard from "../components/admin/AdminDashboard";
 type Props = {};
 
 const Admin = (props: Props) => {

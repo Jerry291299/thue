@@ -14,7 +14,7 @@ export const validateCartPrices = async (userId: string) => {
   
       // Find the corresponding variant in the product
       const variant = product.variants.find(
-        (v) => v.size === item.size && v.price === item.price
+        (v) => v.size === item.size && v.basePrice === item.price
       );
   
       if (!variant) {

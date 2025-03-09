@@ -147,7 +147,7 @@ const Header = () => {
                   {(user.info.role === "admin" || user.info.role === "shipper") && (
                     <li className="hover:bg-gray-100">
                       <Link
-                        to={user?.info?.role === "admin" ? "/admin/thongke" : "/shipper"}
+                        to={user?.info?.role === "admin" ? "/admin" : "/shipper"}
                         className="block px-4 py-2"
                         onClick={() => setIsSubMenuOpen(false)}
                       >

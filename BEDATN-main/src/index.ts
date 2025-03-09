@@ -9,12 +9,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import category from "./danhmuc";
 import Cart, { ICartItem } from "./cart";
-import product, { checkDuplicateVariants } from "./product";
+import product, { checkDuplicateVariants, Variant } from "./product";
 import Order from "./order";
 import material from "./material";
 import Tintuc from "./posts";
 import Comment from "./comment";
-
 import crypto from "crypto";
 import { createVNPayPaymentUrl, sortObject } from "./service/VNPay";
 import qs from "qs";
@@ -423,28 +422,42 @@ app.post("/register", async (req: Request, res: Response) => {
 });
 
 // Thêm sản phẩm
-app.post("/product/add", async (req, res) => {
+app.post("/product/add", async (req: Request, res: Response) => {
   try {
-    const { masp, name, img, moTa, brand, categoryID, status, variants } =
-      req.body;
+    const { masp, name, img, moTa, brand, categoryID, status, variants } = req.body;
 
-    // Kiểm tra xem có sản phẩm nào có cùng masp hoặc name không
+    // Input validation
+    if (!masp || !name || !moTa || !brand || !categoryID || typeof status !== "boolean" || !variants) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+
+    // Check for existing product by masp or name
     const existingProductByMasp = await Product.findOne({ masp });
-    const existingProductByName = await Product.findOne({ name });
-
-    const Category = await category.findById(categoryID);
     if (existingProductByMasp) {
       return res.status(400).json({ message: "Mã sản phẩm đã tồn tại" });
     }
 
+    const existingProductByName = await Product.findOne({ name });
     if (existingProductByName) {
       return res.status(400).json({ message: "Tên sản phẩm đã tồn tại" });
     }
 
+    // Validate category
+    const Category = await category.findById(categoryID);
     if (!Category) {
       return res.status(404).json({ message: "Không tìm thấy danh mục" });
     }
-    
+
+    // Check for duplicate variants
+    const duplicateError = checkDuplicateVariants(variants as Variant[]);
+    if (duplicateError) {
+      return res.status(400).json({ message: duplicateError.message });
+    }
+
+    // Ensure img is an array and has at least one entry (optional, based on your needs)
+    if (!Array.isArray(img) || img.length === 0) {
+      return res.status(400).json({ message: "Cần ít nhất một hình ảnh" });
+    }
 
     const newProduct = new Product({
       masp,
@@ -461,11 +474,11 @@ app.post("/product/add", async (req, res) => {
     res.status(201).json({
       message: "Thêm sản phẩm thành công",
       product: newProduct,
-      status: 200,
+      status: 200, // Note: status 200 in response body seems unusual; consider removing or aligning with HTTP status
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Lỗi thêm mới" });
+    res.status(500).json({ message: "Lỗi thêm mới", error});
   }
 });
 
@@ -578,28 +591,79 @@ app.delete("/product/:id", async (req: Request, res: Response) => {
 });
 
 // active product
-app.put("/product/deactivate/:id", async (req: Request, res: Response) => {
+app.put("/product/:id", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const productToUpdate = await product.findByIdAndUpdate(
-      id,
-      { status: false },
-      { new: true }
-    );
+    const { masp, name, img, moTa, brand, categoryID, status, variants } = req.body;
 
-    if (!productToUpdate) {
-      return res
-        .status(404)
-        .json({ message: "Không tìm thấy sản phẩm để vô hiệu hóa" });
+    // Check if product exists
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    res.json({
-      message: "Sản phẩm đã được vô hiệu hóa",
-      product: productToUpdate,
+    // Input validation (optional fields can be omitted in update)
+    if (masp && typeof masp !== "string") {
+      return res.status(400).json({ message: "Mã sản phẩm không hợp lệ" });
+    }
+    if (name && typeof name !== "string") {
+      return res.status(400).json({ message: "Tên sản phẩm không hợp lệ" });
+    }
+    if (categoryID) {
+      const Category = await category.findById(categoryID);
+      if (!Category) {
+        return res.status(404).json({ message: "Không tìm thấy danh mục" });
+      }
+    }
+
+    // Check for duplicate masp or name if provided (excluding current product)
+    if (masp && masp !== existingProduct.masp) {
+      const existingByMasp = await Product.findOne({ masp });
+      if (existingByMasp) {
+        return res.status(400).json({ message: "Mã sản phẩm đã tồn tại" });
+      }
+    }
+    if (name && name !== existingProduct.name) {
+      const existingByName = await Product.findOne({ name });
+      if (existingByName) {
+        return res.status(400).json({ message: "Tên sản phẩm đã tồn tại" });
+      }
+    }
+
+    // Check duplicate variants if provided
+    if (variants) {
+      const duplicateError = checkDuplicateVariants(variants as Variant[]);
+      if (duplicateError) {
+        return res.status(400).json({ message: duplicateError.message });
+      }
+    }
+
+    // Ensure img is an array if provided (optional constraint)
+    if (img && (!Array.isArray(img) || img.length === 0)) {
+      return res.status(400).json({ message: "Cần ít nhất một hình ảnh" });
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      req.params.id,
+      {
+        masp: masp ?? existingProduct.masp,
+        name: name ?? existingProduct.name,
+        img: img ?? existingProduct.img,
+        moTa: moTa ?? existingProduct.moTa,
+        brand: brand ?? existingProduct.brand,
+        category: categoryID ?? existingProduct.category,
+        status: status ?? existingProduct.status,
+        variants: variants ?? existingProduct.variants,
+      },
+      { new: true, runValidators: true } // runValidators ensures schema rules are enforced
+    );
+
+    res.status(200).json({
+      message: "Cập nhật sản phẩm thành công",
+      product: updatedProduct,
     });
   } catch (error) {
-    console.error("Error deactivating product:", error);
-    res.status(500).json({ message: "Lỗi khi vô hiệu hóa sản phẩm" });
+    console.error(error);
+    res.status(500).json({ message: "Lỗi cập nhật sản phẩm", error });
   }
 });
 

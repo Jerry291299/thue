@@ -62,14 +62,6 @@ const Navbar = (props: Props) => {
                 </NavLink>
               </li>
               <li>
-                <NavLink
-                  to="/admin/thongke"
-                  className="flex items-center px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
-                >
-                  Thống kê
-                </NavLink>
-              </li>
-              <li>
                 <button
                   onClick={handleLogout}
                   className="flex items-center w-full px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
@@ -159,14 +151,7 @@ const Navbar = (props: Props) => {
                   Chức năng:
                 </h2>
                 <ul className="space-y-2 text-md">
-                  <li>
-                    <NavLink
-                      to="/shipper/dashboard"
-                      className="flex items-center px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
-                    >
-                      Thống kê
-                    </NavLink>
-                  </li>
+                  
                   <li>
                     <NavLink
                       to="/shipper/orders"

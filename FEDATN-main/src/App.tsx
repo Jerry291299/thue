@@ -40,7 +40,6 @@ import NewsTable from "./components/admin/tintuc";
 import AddNews from "./components/admin/modaladd/addtintuc";
 import UpdateNews from "./components/admin/modaladd/updatetintuc";
 import DashboardNews from "./components/admin/tintuc";
-import AdminDashboard from "./components/admin/AdminDashboard";
 import Profileinfo from "./components/user/profile/profileinfo";
 import Profile from "./layout/profile";
 import OrderDetail from "./components/OrderDetail";
@@ -86,7 +85,6 @@ function App() {
             }
           >
              <Route path="comments" element={<CommentDashboard />} />
-             <Route path="thongke" element={<AdminDashboard />} />
             <Route path="add" element={<Add />} />
             <Route path="addNews" element={<AddNews />} />
             <Route path="dashboard" element={<Dashboard />} />
@@ -133,7 +131,6 @@ function App() {
               </Privaterouter>
             }
           >
-            <Route path="/shipper/dashboard" element={<ShipperDashboard />} />
             {/* {/* <Route path="orders" element={<ShipperOrders />} /> */}
             <Route path="/shipper/orders" element={<OrdersShipper />} />
           </Route>

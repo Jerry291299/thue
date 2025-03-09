@@ -1,37 +1,50 @@
 import mongoose, { Schema, Document } from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 
-export interface Variant {
-  size: string; 
-  color: string;  // Added color field
+export interface SubVariant {
+  specification: string; // e.g., "128GB", "8GB RAM"
+  value: string; // e.g., "Storage", "Memory"
+  additionalPrice: number;
   quantity: number;
-  price: number; 
+}
+
+export interface Variant {
+  size: string;
+  color: string;
+  basePrice: number;
   discount: number;
+  quantity: number;
+  subVariants: SubVariant[];
 }
 
 export interface Product extends Document {
   masp: string;
-  name: string; 
-  img: string[]; 
-  moTa: string; 
-  brand: string; 
-  category: mongoose.Schema.Types.ObjectId; 
-  status: boolean; 
-  variants: Variant[]; 
+  name: string;
+  img: string[];
+  moTa: string;
+  brand: string;
+  category: mongoose.Schema.Types.ObjectId;
+  status: boolean;
+  variants: Variant[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-const VariantSchema: Schema = new Schema(
-  {
-    size: { type: String, required: true },
-    color: { type: String, required: true }, // Added color field
-    quantity: { type: Number, required: true },
-    price: { type: Number, required: true },
-    discount: { type: Number, default: 0 },
-  },
-  { timestamps: true }
-);
+const SubVariantSchema: Schema = new Schema({
+  specification: { type: String, required: true },
+  value: { type: String, required: true },
+  additionalPrice: { type: Number, required: true, default: 0 },
+  quantity: { type: Number, required: true }
+});
+
+const VariantSchema: Schema = new Schema({
+  size: { type: String, required: true },
+  color: { type: String, required: true },
+  basePrice: { type: Number, required: true },
+  discount: { type: Number, default: 0 },
+  quantity: { type: Number, required: true },
+  subVariants: [SubVariantSchema]
+});
 
 const ProductSchema: Schema = new Schema(
   {
@@ -42,16 +55,7 @@ const ProductSchema: Schema = new Schema(
     brand: { type: String, required: true },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
     status: { type: Boolean, required: true },
-    variants: [
-      {
-        size: { type: String, required: true },
-        color: { type: String, required: true }, 
-        quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
-        discount: { type: Number, default: 0 },
-      },
-      { timestamps: true },
-    ],
+    variants: [VariantSchema],
   },
   { timestamps: true }
 );
@@ -59,13 +63,25 @@ const ProductSchema: Schema = new Schema(
 export function checkDuplicateVariants(variants: Variant[]): Error | null {
   const variantSet = new Set();
   for (const variant of variants) {
-    const key = `${variant.size}-${variant.color}`;
-    if (variantSet.has(key)) {
+    const variantKey = `${variant.size}-${variant.color}`;
+    if (variantSet.has(variantKey)) {
       return new Error(
         `Có biến thể trùng lặp trong sản phẩm: Size: ${variant.size}, Color: ${variant.color}`
       );
     }
-    variantSet.add(key);
+    variantSet.add(variantKey);
+
+    // Check subVariants
+    const subVariantSet = new Set();
+    for (const subVariant of variant.subVariants) {
+      const subKey = `${subVariant.specification}-${subVariant.value}`;
+      if (subVariantSet.has(subKey)) {
+        return new Error(
+          `Có sub-variant trùng lặp trong ${variant.size}-${variant.color}: ${subVariant.specification}-${subVariant.value}`
+        );
+      }
+      subVariantSet.add(subKey);
+    }
   }
   return null;
 }
