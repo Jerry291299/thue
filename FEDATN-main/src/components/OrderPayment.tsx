@@ -2,23 +2,36 @@ import React, { useEffect, useState } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import { getCartByID } from "../service/cart";
-import { CartItem } from "../interface/cart";
+
 import { NavLink, useNavigate } from "react-router-dom";
 import { IOrderData, placeOrder } from "../service/order";
 import { createVNPayPayment } from "../service/payment";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
-import { Color } from "antd/es/color-picker";
+
+// Ensure ICartItem matches your updated schema
+interface ISubVariant {
+  specification: string;
+  value: string;
+}
+
+interface ICartItem {
+  productId: string; // Assuming string since it’s populated as ObjectId.toString()
+  name: string;
+  price: number;
+  img: string;
+  quantity: number;
+  color: string;
+  subVariant?: ISubVariant;
+}
 
 function OrderPayment() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [order, setOrder] = useState<IOrderData[]>([]);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    useState<string>("");
+  const [cartItems, setCartItems] = useState<ICartItem[]>([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
   const [user, setUser] = useState<string>("");
   const [voucherCode, setVoucherCode] = useState<string>("");
-const [discount, setDiscount] = useState<number>(0);
+  const [discount, setDiscount] = useState<number>(0);
   const [customerDetails, setCustomerDetails] = useState({
     name: "",
     phone: "",
@@ -26,14 +39,12 @@ const [discount, setDiscount] = useState<number>(0);
     address: "",
     notes: "",
   });
-
   const [profileData, setProfileData] = useState({
     name: "",
     address: "",
     phone: "",
     email: "",
   });
-
 
   const navigate = useNavigate();
 
@@ -51,9 +62,6 @@ const [discount, setDiscount] = useState<number>(0);
     try {
       const response = await axios.get(`http://localhost:28017/user/${id}`);
       if (response.data) {
-        const formattedDob = response.data.dob
-          ? new Date(response.data.dob).toISOString().split("T")[0]
-          : "";
         setProfileData({
           name: response.data.name || "",
           address: response.data.address || "",
@@ -65,6 +73,7 @@ const [discount, setDiscount] = useState<number>(0);
       console.error("Error fetching profile data:", error);
     }
   };
+
   useEffect(() => {
     if (profileData.name || profileData.phone || profileData.email || profileData.address) {
       setCustomerDetails((prevDetails) => ({
@@ -104,14 +113,12 @@ const [discount, setDiscount] = useState<number>(0);
       toast.error("Vui lòng nhập mã giảm giá.");
       return;
     }
-  
     try {
       const response = await axios.post("http://localhost:28017/voucher/apply", { code: voucherCode });
-  
       setDiscount(response.data.discountAmount);
       toast.success(`Áp dụng mã giảm giá thành công! Giảm ${response.data.discountAmount} VND.`);
     } catch (error) {
-      // toast.error(error.response?.data?.message || "Không thể áp dụng mã giảm giá.");
+      toast.error("Không thể áp dụng mã giảm giá.");
     }
   };
 
@@ -124,21 +131,10 @@ const [discount, setDiscount] = useState<number>(0);
   const discountedTotal = Math.max(0, total - discount);
 
   const handleOrderSubmit = async () => {
-    console.log("Order ID being sent:", user); // Kiểm tra giá trị
-
     if (!selectedPaymentMethod) {
-      toast.success("Sản phẩm đã được thêm vào giỏ hàng!", {
-        position: "top-right",
-        autoClose: 3000,
-        theme: "colored",
-      });
-
+      toast.error("Vui lòng chọn phương thức thanh toán!");
       return;
     }
-
-    const totalAmount = cartItems.reduce((total, item) => {
-      return total + (item.price || 0) * (item.quantity || 0);
-    }, 0);
 
     const orderData: IOrderData = {
       userId: user,
@@ -147,12 +143,13 @@ const [discount, setDiscount] = useState<number>(0);
       paymentMethod: selectedPaymentMethod,
       customerDetails: customerDetails,
     };
-    const updateProductQuantities = async (items: CartItem[]) => {
+
+    const updateProductQuantities = async (items: ICartItem[]) => {
       try {
         for (const item of items) {
           console.log(`Fetching product data for: ${item.productId}`);
 
-          // Lấy thông tin sản phẩm từ API
+          // Fetch product data
           const response = await fetch(
             `http://localhost:28017/api/products-pay/${item.productId}`,
             {
@@ -167,39 +164,57 @@ const [discount, setDiscount] = useState<number>(0);
             return;
           }
 
-          const product = await response.json(); // Lấy thông tin sản phẩm
-
+          const product = await response.json();
           console.log("Product data received:", product);
 
-          // Kiểm tra số lượng còn lại trong kho
-          if (product.soLuong < item.quantity) {
-            toast.error(`Sản phẩm ${item.name} không đủ số lượng.`);
+          // Find the variant and subVariant
+          const variant = product.variants.find((v: any) => v.color === item.color);
+          if (!variant) {
+            toast.error(`Không tìm thấy biến thể cho sản phẩm ${item.name}.`);
             return;
           }
 
-          
-          
-          // Tính số lượng mới của sản phẩm sau khi giảm
-          const updatedQuantity = product.soLuong - item.quantity;
+          let subVariant;
+          if (item.subVariant) {
+            subVariant = variant.subVariants.find(
+              (sv: any) =>
+                sv.specification === item.subVariant?.specification &&
+                sv.value === item.subVariant?.value
+            );
+            if (!subVariant) {
+              toast.error(`Không tìm thấy tùy chọn cho sản phẩm ${item.name}.`);
+              return;
+            }
+          }
 
+          // Check stock availability
+          const availableQuantity = subVariant ? subVariant.quantity : variant.quantity || 0;
+          if (availableQuantity < item.quantity) {
+            toast.error(`Sản phẩm ${item.name} không đủ số lượng trong kho.`);
+            return;
+          }
+
+          // Update quantity
+          const updatedQuantity = availableQuantity - item.quantity;
           console.log(
             `Updating product quantity for ${item.productId}, new quantity: ${updatedQuantity}`
           );
 
-          // Gọi API PUT để cập nhật số lượng
           const updateResponse = await fetch(
             `http://localhost:28017/api/products/${item.productId}`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                 quantity: item.quantity,
-                 Color: item.color,
-                }), // Gửi số lượng đặt
+                quantity: updatedQuantity,
+                color: item.color,
+                subVariant: item.subVariant ? {
+                  specification: item.subVariant.specification,
+                  value: item.subVariant.value,
+                } : undefined,
+              }),
             }
           );
-
-          
 
           if (!updateResponse.ok) {
             const error = await updateResponse.json();
@@ -226,12 +241,9 @@ const [discount, setDiscount] = useState<number>(0);
           "Cảm ơn bạn! Đơn hàng của bạn đã được xác nhận thành công.",
           { position: "top-right" }
         );
-
         setCartItems([]);
         navigate("/success", { state: { orderData } });
-        console.log("Order data:", orderData);
       } else if (selectedPaymentMethod === "vnpay") {
-        console.log("Order data:", orderData);
         await placeOrder(orderData);
         const paymentUrl = await createVNPayPayment({
           userId: user,
@@ -239,7 +251,6 @@ const [discount, setDiscount] = useState<number>(0);
           amount: discountedTotal,
         });
         setCartItems([]);
-
         window.location.href = paymentUrl; // Redirect to VNPay
       }
     } catch (error) {
@@ -351,8 +362,6 @@ const [discount, setDiscount] = useState<number>(0);
               <span className="text-lg font-medium">VNPay</span>
             </button>
           </div>
-
-          {/* Bank transfer details if selected */}
         </div>
 
         {/* Right Column */}
@@ -367,13 +376,18 @@ const [discount, setDiscount] = useState<number>(0);
             >
               <div className="flex items-center">
                 <img
-                  src={item.img[0]}
+                  src={item.img}
                   alt={item.name}
                   className="w-16 h-16 rounded-md mr-4"
                 />
-                <span>{item.name}</span>
+                <div>
+                  <span>{item.name}</span>
+                  <p className="text-sm text-gray-500">
+                    {item.color}{" "}
+                    {item.subVariant ? `(${item.subVariant.value} ${item.subVariant.specification})` : ""}
+                  </p>
+                </div>
               </div>
-             
               <span className="font-semibold">
                 {new Intl.NumberFormat("vi-VN", {
                   style: "currency",
@@ -384,61 +398,58 @@ const [discount, setDiscount] = useState<number>(0);
             </div>
           ))}
 
+          <div className="border-t pt-4 space-y-2">
+            <div className="flex justify-between">
+              <span>Tổng cộng</span>
+              <span>
+                {new Intl.NumberFormat("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                }).format(total)}
+              </span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-green-500">
+                <span>Giảm giá</span>
+                <span>
+                  -{" "}
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(discount)}
+                </span>
+              </div>
+            )}
 
+            <div className="mt-4">
+              <label className="block text-sm font-medium">Mã giảm giá</label>
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={voucherCode}
+                  onChange={(e) => setVoucherCode(e.target.value)}
+                  className="w-full border border-gray-300 p-2 rounded-md"
+                  placeholder="Nhập mã giảm giá"
+                />
+                <button
+                  onClick={handleApplyVoucher}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
 
-
-
-<div className="border-t pt-4 space-y-2">
-  <div className="flex justify-between">
-    <span>Tổng cộng</span>
-    <span>
-      {new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(total)}
-    </span>
-  </div>
-  {discount > 0 && (
-    <div className="flex justify-between text-green-500">
-      <span>Giảm giá</span>
-      <span>
-        - {new Intl.NumberFormat("vi-VN", {
-          style: "currency",
-          currency: "VND",
-        }).format(discount)}
-      </span>
-    </div>
-  )}
-
-<div className="mt-4">
-  <label className="block text-sm font-medium">Mã giảm giá</label>
-  <div className="flex gap-2 mt-2">
-    <input
-      type="text"
-      value={voucherCode}
-      onChange={(e) => setVoucherCode(e.target.value)}
-      className="w-full border border-gray-300 p-2 rounded-md"
-      placeholder="Nhập mã giảm giá"
-    />
-    <button
-      onClick={handleApplyVoucher}
-      className="bg-blue-500 text-white px-4 py-2 rounded-md"
-    >
-      Áp dụng
-    </button>
-  </div>
-</div>
-  <div className="flex justify-between font-bold text-lg">
-    <span>Thành tiền</span>
-    <span>
-      {new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(discountedTotal)}
-    </span>
-  </div>
-</div>
-
+            <div className="flex justify-between font-bold text-lg">
+              <span>Thành tiền</span>
+              <span>
+                {new Intl.NumberFormat("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                }).format(discountedTotal)}
+              </span>
+            </div>
+          </div>
 
           {/* Order confirmation button */}
           <div className="mt-6 flex justify-between items-center">
@@ -460,6 +471,3 @@ const [discount, setDiscount] = useState<number>(0);
 }
 
 export default OrderPayment;
-function confirmOrder(orderData: any) {
-  throw new Error("Function not implemented.");
-}
