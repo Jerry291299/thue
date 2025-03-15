@@ -7,10 +7,10 @@ import { upload } from "../../../service/upload";
 import LoadingComponent from "../../Loading";
 import { useNavigate } from "react-router-dom";
 
-// Define types matching your updated requirements
+// Define types matching the updated schema
 type SubVariant = {
-  specification: string; // e.g., "Storage"
-  value: string; // e.g., "128GB"
+  specification: string;
+  value: string;
   additionalPrice: number;
   quantity: number;
 };
@@ -107,31 +107,40 @@ const Add = () => {
     try {
       const imageUrls = await uploadImages(files);
 
-      // Validate variants and subVariants
-      const validVariants = variants.map((variant) => ({
-        ...variant,
-        subVariants: variant.subVariants.filter(
-          (sv) => sv.specification && sv.value && sv.quantity > 0 && sv.additionalPrice >= 0
-        ),
-      })).filter(
-        (variant) => variant.color && variant.basePrice > 0
-      );
+      const validVariants = variants
+        .map((variant) => ({
+          color: variant.color,
+          basePrice: Number(variant.basePrice), // Already ensured as number
+          discount: variant.discount !== undefined ? Number(variant.discount) : undefined,
+          subVariants: variant.subVariants
+            .filter((sv) => sv.specification && sv.value && sv.quantity >= 0 && sv.additionalPrice >= 0)
+            .map((sv) => ({
+              specification: sv.specification,
+              value: sv.value,
+              additionalPrice: Number(sv.additionalPrice), // Already ensured as number
+              quantity: Number(sv.quantity), // Already ensured as number
+            })),
+        }))
+        .filter((variant) => variant.color && variant.basePrice > 0 && variant.subVariants.length > 0);
 
-      if (validVariants.length === 0 || validVariants.some((v) => v.subVariants.length === 0)) {
-        showNotification("error", "Lỗi", "Phải có ít nhất một biến thể và sub-variant hợp lệ!");
+      if (validVariants.length === 0) {
+        showNotification("error", "Lỗi", "Phải có ít nhất một biến thể hợp lệ với sub-variant!");
         setLoading(false);
         return;
       }
 
       const payload = {
-        ...values,
+        masp: values.masp,
+        name: values.name,
+        img: imageUrls,
         moTa: values.moTa,
         brand: values.brand,
-        img: imageUrls,
         categoryID: values.category,
         status: true,
         variants: validVariants,
       };
+
+      console.log("Payload being sent:", JSON.stringify(payload, null, 2));
 
       const response = await addProduct(payload);
 
@@ -146,9 +155,9 @@ const Add = () => {
       setFiles([]);
       setPreviews([]);
       setVariants([{ color: "", basePrice: 0, discount: undefined, subVariants: [{ specification: "", value: "", additionalPrice: 0, quantity: 0 }] }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding product:", error);
-      showNotification("error", "Lỗi", "Không thể thêm sản phẩm, vui lòng thử lại!");
+      showNotification("error", "Lỗi thêm mới", error.response?.data?.message || "Không thể thêm sản phẩm, vui lòng thử lại!");
     } finally {
       setLoading(false);
     }
@@ -164,9 +173,9 @@ const Add = () => {
     if (field === "color") {
       updatedVariants[index][field] = value as string;
     } else if (field === "basePrice") {
-      updatedVariants[index][field] = value as number;
+      updatedVariants[index][field] = value === "" || value === undefined ? 0 : Number(value);
     } else if (field === "discount") {
-      updatedVariants[index][field] = value as number | undefined;
+      updatedVariants[index][field] = value === "" || value === undefined ? undefined : Number(value);
     }
     setVariants(updatedVariants);
   };
@@ -182,7 +191,7 @@ const Add = () => {
     if (field === "specification" || field === "value") {
       subVariants[subIndex][field] = value as string;
     } else if (field === "additionalPrice" || field === "quantity") {
-      subVariants[subIndex][field] = value as number;
+      subVariants[subIndex][field] = value === "" || value === undefined ? 0 : Number(value);
     }
     updatedVariants[variantIndex].subVariants = subVariants;
     setVariants(updatedVariants);
@@ -296,7 +305,7 @@ const Add = () => {
                       type="number"
                       placeholder="Giá cơ bản"
                       value={variant.basePrice}
-                      onChange={(e) => handleVariantChange(variantIndex, "basePrice", e.target.value === "" ? 0 : Number(e.target.value))}
+                      onChange={(e) => handleVariantChange(variantIndex, "basePrice", e.target.value)}
                       className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
                     />
                   </Form.Item>
@@ -304,8 +313,8 @@ const Add = () => {
                     <Input
                       type="number"
                       placeholder="Giảm giá (VND)"
-                      value={variant.discount || 0}
-                      onChange={(e) => handleVariantChange(variantIndex, "discount", e.target.value === "" ? 0 : Number(e.target.value))}
+                      value={variant.discount}
+                      onChange={(e) => handleVariantChange(variantIndex, "discount", e.target.value)}
                       className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
                     />
                   </Form.Item>
@@ -338,7 +347,7 @@ const Add = () => {
                           type="number"
                           placeholder="Giá thêm (VND)"
                           value={subVariant.additionalPrice}
-                          onChange={(e) => handleSubVariantChange(variantIndex, subIndex, "additionalPrice", e.target.value === "" ? 0 : Number(e.target.value))}
+                          onChange={(e) => handleSubVariantChange(variantIndex, subIndex, "additionalPrice", e.target.value)}
                           className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
                         />
                       </Form.Item>
@@ -347,7 +356,7 @@ const Add = () => {
                           type="number"
                           placeholder="Số lượng"
                           value={subVariant.quantity}
-                          onChange={(e) => handleSubVariantChange(variantIndex, subIndex, "quantity", e.target.value === "" ? 0 : Number(e.target.value))}
+                          onChange={(e) => handleSubVariantChange(variantIndex, subIndex, "quantity", e.target.value)}
                           className="p-3 h-12 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-600"
                         />
                       </Form.Item>

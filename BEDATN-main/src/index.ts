@@ -1161,39 +1161,77 @@ app.get("/orders", async (req: Request, res: Response) => {
 router.post("/api/orders", async (req: Request, res: Response) => {
   const { userId, items, paymentMethod, amount, customerDetails } = req.body;
 
+  // Validate request body
+  if (!userId || !items || !paymentMethod || !amount || !customerDetails) {
+    return res.status(400).json({ message: "Thiếu dữ liệu đơn hàng" });
+  }
+
   try {
-    // Kiểm tra và cập nhật số lượng sản phẩm trong kho
+    // Check and update product quantities in stock
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
         return res.status(404).json({
-          message: `Sản phẩm không tồn tại.`,
+          message: `Sản phẩm không tồn tại: ${item.productId}`,
         });
       }
 
-      // Tìm kiếm biến thể tương ứng trong mảng variants
+      // Find the variant by color
       const variant = product.variants.find((v) => v.color === item.color);
-
-      if (!variant || variant.quantity < item.quantity) {
+      if (!variant) {
         return res.status(400).json({
-          message: `Không đủ số lượng sản phẩm ${item.name} (${item.color}) trong kho.`,
+          message: `Không tìm thấy biến thể ${item.color} cho sản phẩm ${item.name}`,
         });
       }
 
-      // Giảm số lượng biến thể
-      variant.quantity -= item.quantity;
+      // If subVariant is provided, check and update its quantity
+      if (item.subVariant) {
+        const subVariant = variant.subVariants.find(
+          (sv) => sv.specification === item.subVariant.specification && sv.value === item.subVariant.value
+        );
+        if (!subVariant) {
+          return res.status(400).json({
+            message: `Không tìm thấy sub-variant ${item.subVariant.specification}: ${item.subVariant.value} cho sản phẩm ${item.name} (${item.color})`,
+          });
+        }
 
-      // Lưu lại sản phẩm
+        if (subVariant.quantity < item.quantity) {
+          return res.status(400).json({
+            message: `Không đủ số lượng cho sản phẩm ${item.name} (${item.color}, ${item.subVariant.specification}: ${item.subVariant.value}) trong kho. Còn lại: ${subVariant.quantity}`,
+          });
+        }
+
+        // Reduce the subVariant quantity
+        subVariant.quantity -= item.quantity;
+      } else {
+        // If no subVariant is provided, assume the first subVariant (or handle as needed)
+        if (variant.subVariants.length === 0) {
+          return res.status(400).json({
+            message: `Sản phẩm ${item.name} (${item.color}) không có sub-variant nào để cập nhật số lượng`,
+          });
+        }
+        const subVariant = variant.subVariants[0]; // Default to first subVariant (adjust logic if needed)
+        if (subVariant.quantity < item.quantity) {
+          return res.status(400).json({
+            message: `Không đủ số lượng cho sản phẩm ${item.name} (${item.color}) trong kho. Còn lại: ${subVariant.quantity}`,
+          });
+        }
+        subVariant.quantity -= item.quantity;
+      }
+
+      // Save the updated product
       await product.save();
     }
 
-    // Tạo đơn hàng
+    // Create the order
     const newOrder = new Order({
       userId,
       items,
       paymentMethod,
       amount,
       customerDetails,
+      status: "pending", // Optional: add status if your schema supports it
+      createdAt: new Date(),
     });
 
     await newOrder.save();
@@ -1201,7 +1239,7 @@ router.post("/api/orders", async (req: Request, res: Response) => {
     res.status(201).json({ message: "Đặt hàng thành công", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
-    res.status(500).json({ message: "Lỗi máy chủ" });
+    res.status(500).json({ message: "Lỗi máy chủ", error});
   }
 });
 
@@ -1565,63 +1603,6 @@ app.post("/order/confirm", async (req: Request, res: Response) => {
     await order.save();
     await Cart.findOneAndUpdate({ userId }, { items: [] });
 
-    // Prepare product details for email
-    const productDetailsHtml = items.map((item: ICartItem) => {
-      const variantInfo = `
-        <p>Màu sắc: ${item.color}</p>
-        ${
-          item.subVariant
-            ? `<p>Tùy chọn: ${item.subVariant.value} ${item.subVariant.specification}</p>`
-            : ""
-        }
-        <p>Giá: ${item.price.toFixed(0)} VND</p>
-      `;
-
-      return `
-        <div style="margin-bottom: 10px;">
-          <h3>Tên sản phẩm: ${item.name}</h3>
-          <p>Giá sản phẩm: ${item.price.toFixed(0)} VND</p>
-          <p>Số lượng: ${item.quantity}</p>
-          <p>Biến thể sản phẩm:</p>
-          ${variantInfo}
-          <p>Hình ảnh sản phẩm:</p>
-          <img src="${item.img}" alt="${item.name}" style="width:200px; height:auto;" />
-        </div>
-      `;
-    }).join("");
-
-    // Set up email transporter
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // Send confirmation email
-    const emailOptions = {
-      from: process.env.EMAIL_USER,
-      to: customerDetails.email,
-      subject: "Beautiful House - Xác nhận đơn hàng",
-      html: `
-        <h1>Xác nhận đơn hàng</h1>
-        <p>Đơn hàng của bạn đã được đặt thành công!</p>
-        <p>ID đơn hàng: ${order._id}</p>
-        <p>Họ và tên Khách Hàng: ${customerDetails.name}</p>
-        <p>Email Khách Hàng: ${customerDetails.email}</p>
-        <p>Số điện thoại Khách Hàng: ${customerDetails.phone}</p>
-        <p>Địa chỉ Khách Hàng: ${customerDetails.address}</p>
-        <h2>Thông tin sản phẩm:</h2>
-        ${productDetailsHtml}
-        <p>Thời gian đặt đơn hàng: ${order.createdAt}</p>
-        <h4>Phương thức thanh toán: Thanh toán khi nhận hàng</h4>
-        <h4>Thời gian nhận hàng: 2 - 3 ngày tới</h4>
-      `,
-    };
-
-    await transporter.sendMail(emailOptions);
-
     res.status(201).json({
       message: "Order confirmed and cart reset",
       orderId: order._id,
@@ -1834,21 +1815,24 @@ app.get("/api/products-pay/:productId", async (req: Request, res: Response) => {
 });
 app.put("/api/products/:productId", async (req: Request, res: Response) => {
   const { productId } = req.params;
-  const { quantity, color, subVariant } = req.body; // Updated to include color and subVariant
+  const { quantity, color, subVariant } = req.body;
 
   // Validate inputs
   if (!quantity || !Number.isInteger(quantity) || quantity < 0) {
-    return res.status(400).json({ message: "Invalid quantity provided" });
+    return res.status(400).json({ message: "Số lượng không hợp lệ" });
   }
   if (!color) {
-    return res.status(400).json({ message: "Color is required" });
+    return res.status(400).json({ message: "Màu sắc là bắt buộc" });
+  }
+  if (!subVariant || !subVariant.specification || !subVariant.value) {
+    return res.status(400).json({ message: "SubVariant phải bao gồm specification và value" });
   }
 
   try {
     // Retrieve product from the database
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
     console.log("Product fetched:", product);
@@ -1856,55 +1840,34 @@ app.put("/api/products/:productId", async (req: Request, res: Response) => {
     // Find the variant by color
     const variant = product.variants.find((v) => v.color === color);
     if (!variant) {
-      return res.status(404).json({ message: "Variant not found for the specified color" });
+      return res.status(404).json({ message: `Không tìm thấy biến thể cho màu ${color}` });
     }
 
-    // Handle subVariant if provided
-    if (subVariant) {
-      if (!subVariant.specification || !subVariant.value) {
-        return res.status(400).json({ message: "SubVariant must include specification and value" });
-      }
-
-      const subVar = variant.subVariants.find(
-        (sv) => sv.specification === subVariant.specification && sv.value === subVariant.value
-      );
-      if (!subVar) {
-        return res.status(404).json({ message: "SubVariant not found" });
-      }
-
-      // Check available stock for the subVariant
-      if (subVar.quantity < quantity) {
-        return res.status(400).json({ message: "Not enough stock for the selected subVariant" });
-      }
-
-      // Update the subVariant quantity
-      subVar.quantity = quantity; // Set to the new quantity (assuming this is the updated stock)
-      console.log(`Updated subVariant quantity to ${subVar.quantity} for ${subVariant.specification}: ${subVariant.value}`);
-    } else {
-      // If no subVariant is provided, assume the variant itself has a quantity field (optional)
-      // Note: Your current schema doesn't have variant.quantity; adjust if needed
-      if (typeof variant.quantity !== "number") {
-        return res.status(400).json({ message: "Variant quantity not supported without subVariant" });
-      }
-      if (variant.quantity < quantity) {
-        return res.status(400).json({ message: "Not enough stock for the selected variant" });
-      }
-      variant.quantity -= quantity; // Deduct the ordered quantity (if applicable)
-      console.log(`Updated variant quantity to ${variant.quantity} for color ${color}`);
+    // Find the subVariant
+    const subVar = variant.subVariants.find(
+      (sv) => sv.specification === subVariant.specification && sv.value === subVariant.value
+    );
+    if (!subVar) {
+      return res.status(404).json({ message: `Không tìm thấy subVariant ${subVariant.specification}: ${subVariant.value}` });
     }
+
+    // Update the subVariant quantity (set to new value)
+    subVar.quantity = quantity;
+    console.log(`Đã cập nhật số lượng subVariant thành ${subVar.quantity} cho ${subVariant.specification}: ${subVariant.value}`);
 
     // Save changes to the database
     await product.save();
 
     res.status(200).json({
-      message: "Product quantity updated successfully",
+      message: "Cập nhật số lượng sản phẩm thành công",
       variant,
     });
   } catch (error) {
-    console.error("Error updating product:", error);
-    res.status(500).json({ message: "Error updating product quantity" });
+    console.error("Lỗi khi cập nhật sản phẩm:", error);
+    res.status(500).json({ message: "Lỗi cập nhật số lượng sản phẩm", error});
   }
 });
+
 app.put("/change-password/:userId", async (req: Request, res: Response) => {
   const { userId } = req.params;
   const { oldPassword, newPassword, changedBy } = req.body;

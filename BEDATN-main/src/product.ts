@@ -2,8 +2,8 @@ import mongoose, { Schema, Document } from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 
 export interface SubVariant {
-  specification: string; // e.g., "128GB", "8GB RAM"
-  value: string; // e.g., "Storage", "Memory"
+  specification: string; // e.g., "Storage"
+  value: string; // e.g., "128GB"
   additionalPrice: number;
   quantity: number;
 }
@@ -11,8 +11,7 @@ export interface SubVariant {
 export interface Variant {
   color: string;
   basePrice: number;
-  discount: number;
-  quantity: number;
+  discount?: number; // Optional, as in frontend
   subVariants: SubVariant[];
 }
 
@@ -33,16 +32,14 @@ const SubVariantSchema: Schema = new Schema({
   specification: { type: String, required: true },
   value: { type: String, required: true },
   additionalPrice: { type: Number, required: true, default: 0 },
-  quantity: { type: Number, required: true }
+  quantity: { type: Number, required: true, min: 0 },
 });
 
 const VariantSchema: Schema = new Schema({
-  
   color: { type: String, required: true },
   basePrice: { type: Number, required: true },
   discount: { type: Number, default: 0 },
-  quantity: { type: Number, required: true },
-  subVariants: [SubVariantSchema]
+  subVariants: [SubVariantSchema], // Quantity is managed here
 });
 
 const ProductSchema: Schema = new Schema(
@@ -70,7 +67,6 @@ export function checkDuplicateVariants(variants: Variant[]): Error | null {
     }
     variantSet.add(variantKey);
 
-    // Check subVariants
     const subVariantSet = new Set();
     for (const subVariant of variant.subVariants) {
       const subKey = `${subVariant.specification}-${subVariant.value}`;
