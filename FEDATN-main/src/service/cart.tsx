@@ -42,11 +42,20 @@ export const removeFromCart = async (userId: string, productId: string) => {
 };
 
 
-export const updateCartQuantity = async (userId: string, productId: string, newQuantity: number) => {
+export const updateCartQuantity = async (
+  userId: string,
+  productId: string,
+  newQuantity: number,
+  options?: { color?: string; specification?: string; value?: string }
+) => {
   try {
     const response = await axiosservice.put(`/${userId}/cartupdate`, {
       productId,
-      newQuantity
+      newQuantity,
+      color: options?.color,
+      subVariant: options
+        ? { specification: options.specification, value: options.value }
+        : undefined,
     });
     return response.data; // Return updated cart data if needed
   } catch (error) {

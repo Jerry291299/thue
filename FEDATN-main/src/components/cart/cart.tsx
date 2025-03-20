@@ -17,7 +17,6 @@ const Cart = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch cart data based on user ID
   const fetchCartData = async (userId: string) => {
     setLoading(true);
     try {
@@ -33,26 +32,24 @@ const Cart = () => {
     }
   };
 
-  // Check for price changes
   const checkForPriceChanges = async () => {
     try {
       const response = await axios.post("http://localhost:28017/checkout", {
         userId,
       });
       if (response.status === 400 && response.data.message) {
-        toast.error(response.data.message); 
-        setCartItems([]); 
-        return "priceChanged"; 
+        toast.error(response.data.message);
+        setCartItems([]);
+        return "priceChanged";
       }
     } catch (error: any) {
       console.error("Error during price check:", error.response?.data || error);
       if (error.response?.status === 400 && error.response.data?.message) {
-        // toast.error(error.response.data.message); 
-        setCartItems([]); 
-        return "priceChanged"; 
+        setCartItems([]);
+        return "priceChanged";
       }
     }
-    return "noChange"; 
+    return "noChange";
   };
 
   useEffect(() => {
@@ -64,13 +61,13 @@ const Cart = () => {
         fetchCartData(id);
       }
     }
-  }, []); 
+  }, []);
 
   useEffect(() => {
     if (userId) {
       checkForPriceChanges();
     }
-  }, [userId]); 
+  }, [userId]);
 
   const handleRemove = async (item: CartItem) => {
     try {
@@ -89,39 +86,36 @@ const Cart = () => {
       const text = await response.text();
 
       if (response.ok && text.startsWith("{")) {
-        let product;
-        try {
-          product = JSON.parse(text);
+        const product = JSON.parse(text);
+        const matchingVariant = product.variants.find((v: any) => v.color === item.color);
+        const matchingSubVariant = matchingVariant?.subVariants.find(
+          (sv: any) => sv.specification === item.subVariant?.specification && sv.value === item.subVariant?.value
+        );
 
-          if (item.quantity + 1 > product.soLuong) {
-            toast.error("Sản phẩm không đủ số lượng để thêm vào giỏ hàng.");
-            return;
-          }
+        const availableQuantity = matchingSubVariant ? matchingSubVariant.quantity : product.soLuong;
 
-          const updatedItems = cartItems.map((cartItem) =>
-            cartItem.productId === item.productId
-              ? { ...cartItem, quantity: cartItem.quantity + 1 }
-              : cartItem
-          );
-          setCartItems(updatedItems);
-
-          const updateResponse = await fetch(`http://localhost:28017/api/cart/${userId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              productId: item.productId,
-              quantity: item.quantity + 1,
-            }),
-          });
-
-          if (!updateResponse.ok) {
-            throw new Error(`Failed to update cart quantity: ${updateResponse.statusText}`);
-          }
-
-          toast.success("Số lượng sản phẩm đã được cập nhật.");
-        } catch (parseError) {
-          throw new Error("Failed to parse product details as JSON.");
+        if (item.quantity + 1 > availableQuantity) {
+          toast.error("Sản phẩm không đủ số lượng để thêm vào giỏ hàng.");
+          return;
         }
+
+        const updatedItems = cartItems.map((cartItem) =>
+          cartItem.productId === item.productId &&
+          cartItem.color === item.color &&
+          (!item.subVariant || 
+            (cartItem.subVariant?.specification === item.subVariant?.specification && 
+             cartItem.subVariant?.value === item.subVariant?.value))
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
+        );
+        setCartItems(updatedItems);
+
+        await updateCartQuantity(userId as string, item.productId, item.quantity + 1, {
+          color: item.color,
+          specification: item.subVariant?.specification,
+          value: item.subVariant?.value,
+        });
+        toast.success("Số lượng sản phẩm đã được cập nhật.");
       } else {
         throw new Error("Received invalid response, expected JSON.");
       }
@@ -133,14 +127,22 @@ const Cart = () => {
 
   const handleDecrease = async (item: CartItem) => {
     try {
-      if (item.quantity && item.quantity > 1) {
+      if (item.quantity > 1) {
         const updatedItems = cartItems.map((cartItem) =>
-          cartItem.productId === item.productId
-            ? { ...cartItem, quantity: item.quantity - 1 }
+          cartItem.productId === item.productId &&
+          cartItem.color === item.color &&
+          (!item.subVariant || 
+            (cartItem.subVariant?.specification === item.subVariant?.specification && 
+             cartItem.subVariant?.value === item.subVariant?.value))
+            ? { ...cartItem, quantity: cartItem.quantity - 1 }
             : cartItem
         );
         setCartItems(updatedItems);
-        await updateCartQuantity(userId as string, item.productId, item.quantity - 1);
+        await updateCartQuantity(userId as string, item.productId, item.quantity - 1, {
+          color: item.color,
+          specification: item.subVariant?.specification,
+          value: item.subVariant?.value,
+        });
         toast.success("Số lượng sản phẩm đã được cập nhật.");
       } else {
         handleRemove(item);
@@ -158,42 +160,34 @@ const Cart = () => {
   }, 0);
 
   const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent default form submission
-  
+    e.preventDefault();
+
     try {
-      // Check user status
-      const userStatusResponse = await axios.get(
-        `http://localhost:28017/user/${userId}/status`
-      );
-  
+      const userStatusResponse = await axios.get(`http://localhost:28017/user/${userId}/status`);
       const { active, reason } = userStatusResponse.data;
-  
+
       if (!active) {
-        toast.error(
-          `Your account is deactivated. Reason: ${reason || "Not specified"}`
-        );
+        toast.error(`Your account is deactivated. Reason: ${reason || "Not specified"}`);
         return;
       }
-  
+
       const priceCheckResult = await checkForPriceChanges();
-  
       if (priceCheckResult === "priceChanged") {
         toast.warning("The price of items in your cart has changed. Please review your cart.");
         return;
       }
-  
+
       if (cartItems.length === 0) {
         toast.info("Your cart is empty.");
         return;
       }
-  
+
       navigate("/order");
     } catch (error) {
       console.error("Failed to check user status:", error);
       toast.error("An error occurred while checking user status.");
     }
   };
-  
 
   return (
     <>
@@ -214,7 +208,8 @@ const Cart = () => {
                     <th className="p-4 font-semibold text-gray-700"></th>
                     <th className="p-4 font-semibold text-gray-700"></th>
                     <th className="p-4 font-semibold text-gray-700 uppercase">Sản phẩm</th>
-                    <th className="p-4 font-semibold text-gray-700 uppercase">Kích cỡ</th>
+                    <th className="p-4 font-semibold text-gray-700 uppercase">Màu sắc</th>
+                    <th className="p-4 font-semibold text-gray-700 uppercase">Thông số</th>
                     <th className="p-4 font-semibold text-gray-700 uppercase">Số lượng</th>
                     <th className="p-4 font-semibold text-gray-700 uppercase">Giá</th>
                   </tr>
@@ -222,7 +217,7 @@ const Cart = () => {
                 <tbody className="divide-y">
                   {cartItems.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center">Giỏ hàng đang trống</td>
+                      <td colSpan={7} className="p-4 text-center">Giỏ hàng đang trống</td>
                     </tr>
                   ) : (
                     cartItems.map((item, index) => (
@@ -233,20 +228,23 @@ const Cart = () => {
                             className="text-red-500 hover:text-red-600 transition-colors duration-200 text-xl"
                             aria-label={`Remove ${item.name}`}
                           >
-                            &times;
+                            ×
                           </button>
                         </td>
                         <td className="p-4">
                           <div className="w-20 h-20 shrink-0 bg-white p-2 rounded-md border border-gray-200">
                             <img
-                              src={item?.img ? item.img[0] : "/default-image.png"}  // Handle null image
+                              src={item.img ? item.img : "/default-image.png"}
                               alt={item.name}
                               className="w-full h-full object-contain"
                             />
                           </div>
                         </td>
                         <td className="p-4 text-gray-700 font-medium">{item.name}</td>
-                        <td className="p-4 text-gray-700 font-medium">{item.color}</td>
+                        <td className="p-4 text-gray-700 font-medium">{item.color || "N/A"}</td>
+                        <td className="p-4 text-gray-700 font-medium">
+                          {item.subVariant ? `${item.subVariant.specification}: ${item.subVariant.value}` : "N/A"}
+                        </td>
                         <td className="p-4">
                           <div className="flex items-center gap-3">
                             <button
