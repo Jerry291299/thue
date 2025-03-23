@@ -997,99 +997,10 @@ app.get("/deactive/:id", (req, res) => {
   res.send(`Deactivating item with ID ${itemId}`);
 });
 
-// Materal
-app.post("/addmaterial", async (req: Request, res: Response) => {
-  try {
-    const newMaterial = new material({ ...req.body, status: "active" });
-    await newMaterial.save();
-    res.status(201).json({
-      message: "Thêm Material thành công",
-      material: newMaterial,
-      status: 200,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Lỗi thêm mới vật liệu" });
-  }
-});
 
-// Vô hiệu hóa vật liệu
-app.put("/material/deactivate/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const materialToUpdate = await material.findByIdAndUpdate(
-      id,
-      { status: "deactive" },
-      { new: true }
-    );
-    if (!materialToUpdate) {
-      return res
-        .status(404)
-        .json({ message: "Không tìm thấy vật liệu để vô hiệu hóa" });
-    }
-    res.json({
-      message: "Vật liệu đã được vô hiệu hóa",
-      material: materialToUpdate,
-    });
-  } catch (error) {
-    console.error("Error deactivating material:", error);
-    res.status(500).json({ message: "Lỗi khi vô hiệu hóa vật liệu" });
-  }
-});
 
-// Kích hoạt lại vật liệu
-app.put("/material/activate/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const materialToUpdate = await material.findByIdAndUpdate(
-      id,
-      { status: "active" },
-      { new: true }
-    );
-    if (!materialToUpdate) {
-      return res
-        .status(404)
-        .json({ message: "Không tìm thấy vật liệu để kích hoạt lại" });
-    }
-    res.json({
-      message: "Vật liệu đã được kích hoạt lại",
-      material: materialToUpdate,
-    });
-  } catch (error) {
-    console.error("Error activating material:", error);
-    res.status(500).json({ message: "Lỗi khi kích hoạt lại vật liệu" });
-  }
-});
 
-// Lấy vật liệu
-app.get("/material", async (req: Request, res: Response) => {
-  try {
-    const materials = await material.find();
-    res.json(materials);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Lỗi khi lấy thông tin vật liệu" });
-  }
-});
 
-app.put("/updatematerial/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params; // Lấy ID từ params
-    const updateMaterial = await material.findByIdAndUpdate(id, req.body, {
-      new: true, // Trả về tài liệu đã được cập nhật
-    });
-    res.json(updateMaterial); // Gửi lại tài liệu đã cập nhật
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Lỗi khi cập nhật Chất liệu" });
-  }
-});
-
-app.get("/deactive/:id", (req, res) => {
-  const itemId = req.params.id;
-  // Gọi hàm để deactive item với id là itemId
-  res.send(`Deactivating item with ID ${itemId}`);
-});
 
 
 app.put("/product/deactivate/:id", async (req: Request, res: Response) => {
@@ -1863,8 +1774,8 @@ app.put("/api/products/:productId", async (req: Request, res: Response) => {
   const { quantity, color, subVariant } = req.body;
 
   // Validate inputs
-  if (!quantity || !Number.isInteger(quantity) || quantity < 0) {
-    return res.status(400).json({ message: "Số lượng không hợp lệ" });
+  if (quantity === undefined || !Number.isInteger(quantity) || quantity < 0) {
+    return res.status(400).json({ message: "Số lượng không hợp lệ, phải là số nguyên không âm" });
   }
   if (!color) {
     return res.status(400).json({ message: "Màu sắc là bắt buộc" });
@@ -1879,14 +1790,14 @@ app.put("/api/products/:productId", async (req: Request, res: Response) => {
     if (!product) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
-
-    console.log("Product fetched:", product);
+    console.log("Product fetched:", JSON.stringify(product, null, 2));
 
     // Find the variant by color
     const variant = product.variants.find((v) => v.color === color);
     if (!variant) {
       return res.status(404).json({ message: `Không tìm thấy biến thể cho màu ${color}` });
     }
+    console.log("Variant found:", JSON.stringify(variant, null, 2));
 
     // Find the subVariant
     const subVar = variant.subVariants.find(
@@ -1895,21 +1806,40 @@ app.put("/api/products/:productId", async (req: Request, res: Response) => {
     if (!subVar) {
       return res.status(404).json({ message: `Không tìm thấy subVariant ${subVariant.specification}: ${subVariant.value}` });
     }
+    console.log("SubVariant found:", JSON.stringify(subVar, null, 2));
 
-    // Update the subVariant quantity (set to new value)
+    // Check current quantity (for debugging)
+    console.log(`Current subVariant quantity: ${subVar.quantity}`);
+
+    // Update the subVariant quantity
     subVar.quantity = quantity;
-    console.log(`Đã cập nhật số lượng subVariant thành ${subVar.quantity} cho ${subVariant.specification}: ${subVariant.value}`);
+    console.log(`Updated subVariant quantity to ${subVar.quantity} for ${subVariant.specification}: ${subVariant.value}`);
 
     // Save changes to the database
     await product.save();
+    console.log("Product saved successfully");
 
     res.status(200).json({
       message: "Cập nhật số lượng sản phẩm thành công",
-      variant,
+      product: {
+        _id: product._id,
+        name: product.name,
+        variants: product.variants.map((v) => ({
+          color: v.color,
+          basePrice: v.basePrice,
+          discount: v.discount,
+          subVariants: v.subVariants.map((sv) => ({
+            specification: sv.specification,
+            value: sv.value,
+            additionalPrice: sv.additionalPrice,
+            quantity: sv.quantity,
+          })),
+        })),
+      },
     });
   } catch (error) {
     console.error("Lỗi khi cập nhật sản phẩm:", error);
-    res.status(500).json({ message: "Lỗi cập nhật số lượng sản phẩm", error});
+    res.status(500).json({ message: "Lỗi máy chủ khi cập nhật số lượng sản phẩm", error });
   }
 });
 
