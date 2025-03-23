@@ -1476,31 +1476,76 @@ app.get("/orders/:orderId", async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to fetch order detail", error });
   }
 });
-app.get("/api/admin/stats", async (req, res) => {
+app.get("/api/stats", async (req, res) => {
   try {
+    // Product Statistics
     const totalProducts = await Product.countDocuments();
+    const activeProducts = await Product.countDocuments({ status: true });
+    const productAggregation = await Product.aggregate([
+      { $unwind: "$variants" },
+      { $unwind: "$variants.subVariants" },
+      {
+        $group: {
+          _id: null,
+          totalVariants: { $sum: 1 },
+          totalStock: { $sum: "$variants.subVariants.quantity" },
+        },
+      },
+    ]);
+    const totalVariants = productAggregation[0]?.totalVariants || 0;
+    const totalStock = productAggregation[0]?.totalStock || 0;
 
+    // Order Statistics
     const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ status: "pending" });
+    const packagingOrders = await Order.countDocuments({ status: "packaging" }); // Added for your current data
+    const completedOrders = await Order.countDocuments({ status: "confirm-receive" }); // Adjust if different
+    const canceledOrders = await Order.countDocuments({ "cancelReason.canceledAt": { $exists: true } }); // Fallback to cancelReason
 
-    const deliveredOrders = await Order.countDocuments({
-      status: "delivered",
-    });
+    // Debug: Get all unique statuses
+    const uniqueStatuses = await Order.distinct("status");
+    console.log("Unique Order Statuses:", uniqueStatuses);
 
-    const canceledOrders = await Order.countDocuments({ status: "failed" });
+    // Revenue Statistics (only from completed orders)
+    const revenueAggregation = await Order.aggregate([
+      { $match: { status: "confirm-receive" } }, // Adjust if completion is different
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$amount" },
+          orderCount: { $sum: 1 },
+        },
+      },
+    ]);
+    const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
+    const completedOrderCount = revenueAggregation[0]?.orderCount || 0;
+    const averageOrderValue = completedOrderCount > 0 ? totalRevenue / completedOrderCount : 0;
 
-    const statistics = {
-      totalProducts,
-      totalOrders,
-      deliveredOrders,
-      canceledOrders,
+    const stats = {
+      products: {
+        totalProducts,
+        activeProducts,
+        totalVariants,
+        totalStock,
+      },
+      orders: {
+        totalOrders,
+        pendingOrders,
+        packagingOrders, // Added for visibility
+        completedOrders,
+        canceledOrders,
+      },
+      revenue: {
+        totalRevenue,
+        averageOrderValue,
+      },
     };
 
-    res.json(statistics);
-  } catch (err) {
-    console.error("Error fetching statistics:", err);
-    res.status(500).json({
-      message: "Failed to fetch statistics. Please try again later.",
-    });
+    console.log("Stats:", stats); // Debug log
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error("Error fetching statistics:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

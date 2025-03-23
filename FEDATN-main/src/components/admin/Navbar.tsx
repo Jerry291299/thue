@@ -61,6 +61,8 @@ const Navbar = (props: Props) => {
                   Trang chủ
                 </NavLink>
               </li>
+
+              
               <li>
                 <button
                   onClick={handleLogout}
@@ -77,6 +79,14 @@ const Navbar = (props: Props) => {
                   Chức năng:
                 </h2>
                 <ul className="space-y-2 text-md">
+                <li>
+                <NavLink
+                  to="/admin/thongke"
+                  className="flex items-center px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
+                >
+                  Thống kê
+                </NavLink>
+              </li>
                   <li>
                     <NavLink
                       to="/admin/users"
@@ -117,14 +127,7 @@ const Navbar = (props: Props) => {
                       Danh mục
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink
-                      to="/admin/Material"
-                      className="flex items-center px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
-                    >
-                      Chất liệu
-                    </NavLink>
-                  </li>
+                 
                   <li>
                     <NavLink
                       to="/admin/dashboard"

@@ -46,6 +46,7 @@ import OrderDetail from "./components/OrderDetail";
 import ListVouchers from "./components/admin/voucher/ListVoucher";
 import AddVoucher from "./components/admin/voucher/AddVoucher";
 import EditVoucher from "./components/admin/voucher/EditVoucher";
+import Thongke from "./components/admin/thongke";
 function App() {
   return (
     <>
@@ -84,6 +85,7 @@ function App() {
               </Privaterouter>
             }
           >
+            <Route path="thongke" element={<Thongke />} />
              <Route path="comments" element={<CommentDashboard />} />
             <Route path="add" element={<Add />} />
             <Route path="addNews" element={<AddNews />} />
