@@ -32,7 +32,7 @@ const Users = (props: Props) => {
         setUserId(id);
       }
     }
-  }, []); 
+  }, []);
 
   const showModal = (userId: string) => {
     setSelectedUserId(userId);
@@ -42,8 +42,9 @@ const Users = (props: Props) => {
   const handleCancel = async () => {
     setIsModalOpen(false);
     setSelectedUserId(null);
-    await fetchUsers(); // Refetch users after the modal is closed
+    await fetchUsers();
   };
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -69,37 +70,32 @@ const Users = (props: Props) => {
     fetchDeactivationHistory();
   }, []);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const deactivateUserById = async (id: string) => {
     let selectedReasonLocal = "";
     let tempReason = "";
-  
+
     Modal.confirm({
       title: "Vô hiệu hóa người dùng",
       content: (
-        <>
-          <p>Vui lòng chọn lý do hoặc nhập lý do mới:</p>
+        <div className="space-y-4">
+          <p className="text-gray-700">Vui lòng chọn lý do hoặc nhập lý do mới:</p>
           <Select
-            style={{ width: "100%", marginBottom: 10 }}
+            className="w-full"
             placeholder="Chọn lý do"
-            onChange={(value: string) => {
-              selectedReasonLocal = value;
-            }}
+            onChange={(value: string) => (selectedReasonLocal = value)}
             allowClear
           >
             <Option value="Vi phạm chính sách">Vi phạm chính sách</Option>
             <Option value="Yêu cầu từ người dùng">Yêu cầu từ người dùng</Option>
             <Option value="Hoạt động bất thường">Hoạt động bất thường</Option>
           </Select>
-          <Input.TextArea
+          <TextArea
             rows={4}
             placeholder="Hoặc nhập lý do tùy chỉnh"
             onChange={(e) => (tempReason = e.target.value)}
+            className="border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
           />
-        </>
+        </div>
       ),
       onOk: async () => {
         const finalReason = selectedReasonLocal || tempReason.trim();
@@ -107,12 +103,11 @@ const Users = (props: Props) => {
           message.error("Vui lòng chọn hoặc nhập lý do.");
           return Promise.reject();
         }
-  
         try {
-          const _id = 'admin'; // Assuming you are using the admin ID
+          const _id = "admin"; // Assuming admin ID
           await deactivateUser(id, finalReason);
           message.success(`Người dùng với ID ${id} đã được vô hiệu hóa.`);
-  
+
           setUsers((prevUsers) =>
             prevUsers.map((user) =>
               user._id === id ? { ...user, active: false, reason: finalReason } : user
@@ -120,37 +115,28 @@ const Users = (props: Props) => {
           );
           setDeactivationHistory((prevHistory) => [
             ...prevHistory,
-            {
-              userId: id,
-              reason: finalReason,
-              date: new Date().toLocaleString(),
-              adminId: _id
-            }
+            { userId: id, reason: finalReason, date: new Date().toLocaleString(), adminId: _id },
           ]);
-  
-          // Log out the deactivated user by clearing session storage
+
           sessionStorage.removeItem("userToken");
           sessionStorage.removeItem("userData");
-  
-        
-  
         } catch (error) {
           console.error("Error deactivating user:", error);
           message.error("Có lỗi xảy ra khi vô hiệu hóa người dùng.");
         }
       },
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      className: "rounded-lg",
     });
   };
-  
 
   const activateUserById = async (_id: string) => {
     try {
       await activateUser(_id);
       message.success(`Người dùng với ID ${_id} đã được kích hoạt lại.`);
       setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user._id === _id ? { ...user, active: true } : user
-        )
+        prevUsers.map((user) => (user._id === _id ? { ...user, active: true } : user))
       );
     } catch (error) {
       console.error("Error activating user:", error);
@@ -162,10 +148,7 @@ const Users = (props: Props) => {
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handlePageChange = (page: number, pageSize?: number) => {
     setCurrentPage(page);
@@ -173,193 +156,177 @@ const Users = (props: Props) => {
   };
 
   const historyColumns = [
-    {
-      title: 'ID Người Dùng',
-      dataIndex: 'userId',
-      key: 'userId',
-    },
-    {
-      title: 'Lý Do',
-      dataIndex: 'reason',
-      key: 'reason',
-    },
-    {
-      title: 'Ngày',
-      dataIndex: 'date',
-      key: 'date',
-    },
-    {
-      title: 'Người thực hiện',
-      dataIndex: 'adminId',
-      key: 'adminId',
-    },
+    { title: "ID Người Dùng", dataIndex: "userId", key: "userId" },
+    { title: "Lý Do", dataIndex: "reason", key: "reason" },
+    { title: "Ngày", dataIndex: "date", key: "date" },
+    { title: "Người thực hiện", dataIndex: "adminId", key: "adminId" },
   ];
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-100 p-6">
       {loading && <LoadingComponent />}
-      <div className="flex items-center justify-between px-6 h-[96px] bg-white-600 text-white"></div>
+      <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        {/* Header */}
+        <header className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Quản lý người dùng</h1>
+            <p className="text-sm text-gray-600">Danh sách và trạng thái người dùng</p>
+          </div>
+          <Button
+            type="primary"
+            onClick={() => setShowHistory(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+          >
+            Lịch Sử Vô Hiệu Hóa
+          </Button>
+        </header>
 
-      <div className="flex flex-col w-full p-6 bg-gray-50">
+        {/* Search Bar */}
         <Input
-          placeholder="Tìm kiếm người dùng theo Họ và Tên"
+          placeholder="🔍 Tìm kiếm người dùng theo Họ và Tên"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="border-2 border-gray-300 rounded-md p-3 mb-6"
-          style={{ maxWidth: "400px" }}
+          className="w-full max-w-md p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-6"
         />
 
-        <Button
-          type="primary"
-          onClick={() => setShowHistory(true)}
-          className="mb-6 absolute right-6 top-6"
-        >
-          Lịch Sử Vô Hiệu Hóa
-        </Button>
-
-        <Modal
-          title="Lịch Sử Vô Hiệu Hóa"
-          visible={showHistory}
-          onCancel={() => setShowHistory(false)}
-          footer={null}
-          width={800}
-        >
-          <Table
-            columns={historyColumns}
-            dataSource={deactivationHistory}
-            rowKey="userId"
-          />
-        </Modal>
-
-        <div className="overflow-x-auto shadow-lg rounded-lg">
-          <div className="py-2 inline-block w-full px-0">
-            <div className="overflow-hidden bg-white rounded-lg">
-              <table className="min-w-full table-auto">
-                <thead className="bg-gradient-to-r from-blue-600 to-blue-500 text-white">
-                  <tr>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Stt</th>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Họ và Tên</th>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Email</th>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Vai trò</th>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Trạng thái</th>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Lý do vô hiệu hóa</th>
-                    <th className="text-sm font-medium text-white px-6 py-4 text-left">Thao tác</th>
+        {/* Users Table */}
+        <div className="overflow-x-auto rounded-lg shadow-md">
+          <table className="w-full border-collapse bg-white rounded-lg">
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Stt</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Họ và Tên</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Vai trò</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Trạng thái</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Lý do vô hiệu hóa</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedUsers.length > 0 ? (
+                paginatedUsers.map((user: IUser, index: number) => (
+                  <tr
+                    key={user._id}
+                    className="border-b hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <td className="px-6 py-4 text-gray-700">
+                      {index + 1 + (currentPage - 1) * pageSize}
+                    </td>
+                    <td className="px-6 py-4 text-gray-700">{user.name}</td>
+                    <td className="px-6 py-4 text-gray-700">{user.email}</td>
+                    <td className="px-6 py-4 text-gray-700">{user.role}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                          user.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {user.active ? "Hoạt động" : "Vô hiệu hóa"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-gray-700">
+                      {user.reason && !user.active ? user.reason : "Không có"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => showModal(user._id)}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-1 px-3 rounded-lg transition-colors duration-200"
+                        >
+                          Edit
+                        </Button>
+                        {user.active ? (
+                          <Popconfirm
+                            title="Vô hiệu hóa người dùng"
+                            description="Bạn có chắc chắn muốn vô hiệu hóa người dùng này không?"
+                            onConfirm={() => deactivateUserById(user._id)}
+                            okText="Có"
+                            cancelText="Không"
+                          >
+                            <button
+                              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-lg transition-colors duration-200"
+                            >
+                              Deactivate
+                            </button>
+                          </Popconfirm>
+                        ) : (
+                          <Popconfirm
+                            title="Kích hoạt lại người dùng"
+                            description="Bạn có chắc chắn muốn kích hoạt lại người dùng này không?"
+                            onConfirm={() => activateUserById(user._id)}
+                            okText="Có"
+                            cancelText="Không"
+                          >
+                            <button
+                              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg transition-colors duration-200"
+                            >
+                              Activate
+                            </button>
+                          </Popconfirm>
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {paginatedUsers.length > 0 ? (
-                    paginatedUsers.map((user: IUser, index: number) => (
-                      <tr
-                        className="bg-gray-100 border-b hover:bg-gray-200"
-                        key={user._id}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {index + 1 + (currentPage - 1) * pageSize}
-                        </td>
-                        <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          {user.name}
-                        </td>
-                        <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          {user.email}
-                        </td>
-                        <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          {user.role}
-                        </td>
-                        <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          {user.active ? (
-                            <span className="text-green-600">Hoạt động</span>
-                          ) : (
-                            <span className="text-red-600">Vô hiệu hóa</span>
-                          )}
-                        </td>
-                        <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          {user.reason && !user.active ? (
-                            <span className="text-gray-700">{user.reason}</span>
-                          ) : (
-                            "Không có"
-                          )}
-                        </td>
-                        <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-  <div>
-    <Button className="focus:outline-none text-white bg-green-600 hover:bg-green-700 font-medium rounded-lg text-sm px-6 py-4 mb-[10px] transition" onClick={() => showModal(user._id)}>Edit User</Button>
-    <Modal
-  title="Update User Role"
-  open={isModalOpen}
-  onCancel={handleCancel}
-  footer={null}
->
-  {selectedUserId && (
-    <UpdateUser
-      userId={selectedUserId}
-      onClose={async () => {
-        setIsModalOpen(false);
-        await fetchUsers(); // Refresh user list after modal closes
-      }}
-    />
-  )}
-</Modal>
-  </div>
-  {user.active ? (
-    <Popconfirm
-      title="Vô hiệu hóa người dùng"
-      description="Bạn có chắc chắn muốn vô hiệu hóa người dùng này không?"
-      onConfirm={() => deactivateUserById(user._id)}
-      okText="Có"
-      cancelText="Không"
-    >
-      <button
-        type="button"
-        className="focus:outline-none text-white bg-red-600 hover:bg-red-700 font-medium rounded-lg text-sm px-5 py-2.5 transition"
-      >
-        Deactivate
-      </button>
-    </Popconfirm>
-  ) : (
-    <Popconfirm
-      title="Kích hoạt lại người dùng"
-      description="Bạn có chắc chắn muốn kích hoạt lại người dùng này không?"
-      onConfirm={() => activateUserById(user._id)}
-      okText="Có"
-      cancelText="Không"
-    >
-      <button
-        type="button"
-        className="focus:outline-none text-white bg-green-600 hover:bg-green-700 font-medium rounded-lg text-sm px-5 py-2.5 transition"
-      >
-        Activate
-      </button>
-    </Popconfirm>
-  )}
-</td>
-
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center text-gray-500 py-4"
-                      >
-                        Không tìm thấy người dùng nào.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="text-center text-gray-500 py-4">
+                    Không tìm thấy người dùng nào.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
+        {/* Pagination */}
         <Pagination
           current={currentPage}
           pageSize={pageSize}
           total={filteredUsers.length}
           onChange={handlePageChange}
           showSizeChanger={false}
-          className="mt-4"
+          className="mt-6 flex justify-center"
         />
+
+        {/* Update User Modal */}
+        <Modal
+          title="Cập nhật vai trò người dùng"
+          open={isModalOpen}
+          onCancel={handleCancel}
+          footer={null}
+          className="rounded-lg"
+        >
+          {selectedUserId && (
+            <UpdateUser
+              userId={selectedUserId}
+              onClose={async () => {
+                setIsModalOpen(false);
+                await fetchUsers();
+              }}
+            />
+          )}
+        </Modal>
+
+        {/* Deactivation History Modal */}
+        <Modal
+          title="Lịch Sử Vô Hiệu Hóa"
+          visible={showHistory}
+          onCancel={() => setShowHistory(false)}
+          footer={null}
+          width={800}
+          className="rounded-lg"
+        >
+          <Table
+            columns={historyColumns}
+            dataSource={deactivationHistory}
+            rowKey="userId"
+            className="rounded-lg"
+          />
+        </Modal>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -2,10 +2,8 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Icategory } from "../interface/category";
 import { getAllCategories } from "../service/category";
-import { getProductsByCategory } from "../service/products";
-import logo from "./img/logo.png"
+import logo from "./img/logo.png";
 import nguoi from "../anh/user.png";
-
 import iconarrow from "./icons/down-arrow_5082780.png";
 import axios from "axios";
 
@@ -16,37 +14,23 @@ const Header = () => {
   } | null>(null);
   const [categories, setCategories] = useState<Icategory[]>([]);
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
-  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
-  const [productsByCategory, setProductsByCategory] = useState([]);
-  const Navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const [prevSelectedCategory, setPrevSelectedCategory] = useState<
-    string | null
-  >(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [profileData, setProfileData] = useState({
-    img: "",
-  });
-  
+  const [profileData, setProfileData] = useState({ img: "" });
   const navigate = useNavigate();
-
-
 
   useEffect(() => {
     const userData = sessionStorage.getItem("user");
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-  
       fetchUserProfile(parsedUser.id);
     }
-  
+
     const fetchCategories = async () => {
       const data = await getAllCategories();
       setCategories(data);
     };
-  
+
     fetchCategories();
   }, []);
 
@@ -54,12 +38,8 @@ const Header = () => {
     try {
       const response = await axios.get(`http://localhost:28017/user/${id}`);
       if (response.data) {
-        const formattedDob = response.data.dob
-          ? new Date(response.data.dob).toISOString().split("T")[0]
-          : "";
         setProfileData({
-          img: response.data.img || ""
-          
+          img: response.data.img || "",
         });
       }
     } catch (error) {
@@ -71,205 +51,214 @@ const Header = () => {
     setIsSubMenuOpen(!isSubMenuOpen);
   };
 
-  const toggleCategories = () => {
-    setIsCategoriesOpen(!isCategoriesOpen);
-  };
-
   const handleLogout = () => {
     sessionStorage.removeItem("user");
     setUser(null);
-    Navigate("/");
+    navigate("/");
   };
 
   const handleSearchClick = () => {
     if (searchTerm.trim()) {
-      Navigate(`/search/${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
-  const handleCategoryFilter = (categoryName: string) => {
-    if (categoryName === selectedCategory) {
-      // Thông báo khi cùng một danh mục được nhấp hai lần.
-      alert(`Bạn đã chọn danh mục ${categoryName}.`);
-    } else {
-      setPrevSelectedCategory(selectedCategory);
-      setSelectedCategory(categoryName);
-      navigate(`/categories/${categoryName}`);
+      navigate(`/search/${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
   return (
-    <div className="container mx-auto w-full">
-      <div className="up py-[15px] flex justify-between font-medium pr-[10px]">
-        <div className="trái flex">
-          <div className="flex items-center px-[20px]">
-            <span className="border-black h-full mr-[10px]"></span>
-            <p className="italic hover:scale-110 transition-transform duration-300">
-              Số điện thoại: 0344357227
-            </p>
+    <header className="bg-white shadow-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Top Section */}
+        <div className="flex justify-between items-center py-4 border-b border-gray-200">
+          {/* Left Info */}
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center">
+              <span className="w-px h-5 bg-gray-300 mr-3"></span>
+              <p className="text-gray-700 text-sm hover:text-gray-900 transition-colors duration-200">
+                Số điện thoại: 0344357227
+              </p>
+            </div>
+            <div className="flex items-center">
+              <span className="w-px h-5 bg-gray-300 mr-3"></span>
+              <p className="text-gray-700 text-sm hover:text-gray-900 transition-colors duration-200">
+                Email: support@clickmobile.vn
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center px-[20px]">
-            <span className=" border-black h-full mr-[10px]"></span>
-            <p className="italic hover:scale-110 transition-transform duration-300">
-              Email: 
-            </p>
-          </div>
-
-        </div>
-        <div className="phải flex gap-3">
-          {user ? (
-            <div className="relative">
-              <div
-      className="flex items-center cursor-pointer border-2 border-black rounded-xl px-[10px] py-[5px]"
-      onClick={toggleSubMenu}
-    >
-      <img
-        src={profileData.img || nguoi}
-        alt="Hồ sơ"
-        className="w-8 h-8 rounded-full"
-      />
-      <p className="ml-2 flex gap-2">
-        {user.info.name}
-        <img className="w-4 h-4 mt-[5px]" src={iconarrow} alt="" />
-      </p>
-    </div>
-              {isSubMenuOpen && (
-                <ul className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-10">
-                  <li className="hover:bg-gray-100">
-                    <Link
-                      to={`/profileinfo/${user.id}`}
-                      className="block w-full text-left px-4 py-2"
-                    >
-                      Cá nhân
-                    </Link>
-                  </li>
-                  {(user.info.role === "admin" || user.info.role === "shipper") && (
-                    <li className="hover:bg-gray-100">
+          {/* Right User Actions */}
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <div className="relative">
+                <div
+                  className="flex items-center cursor-pointer border border-gray-300 rounded-full px-3 py-1 hover:bg-gray-100 transition-colors duration-200"
+                  onClick={toggleSubMenu}
+                >
+                  <img
+                    src={profileData.img || nguoi}
+                    alt="Hồ sơ"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <p className="ml-2 text-gray-800 font-medium flex items-center gap-1">
+                    {user.info.name}
+                    <img className="w-4 h-4" src={iconarrow} alt="Dropdown" />
+                  </p>
+                </div>
+                {isSubMenuOpen && (
+                  <ul className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-10 border border-gray-200">
+                    <li className="hover:bg-gray-50">
                       <Link
-                        to={user?.info?.role === "admin" ? "/admin" : "/shipper"}
-                        className="block px-4 py-2"
-                        onClick={() => setIsSubMenuOpen(false)}
+                        to={`/profileinfo/${user.id}`}
+                        className="block px-4 py-2 text-gray-700 hover:text-gray-900"
                       >
-                        Quản trị
+                        Cá nhân
                       </Link>
                     </li>
-                  )}
-                  {(user.info.role === "user" ||
-                    user.info.role === "admin" || user.info.role === "shipper") && (
+                    {(user.info.role === "admin" || user.info.role === "shipper") && (
+                      <li className="hover:bg-gray-50">
+                        <Link
+                          to={user.info.role === "admin" ? "/admin" : "/shipper"}
+                          className="block px-4 py-2 text-gray-700 hover:text-gray-900"
+                          onClick={() => setIsSubMenuOpen(false)}
+                        >
+                          Quản trị
+                        </Link>
+                      </li>
+                    )}
+                    {(user.info.role === "user" ||
+                      user.info.role === "admin" ||
+                      user.info.role === "shipper") && (
                       <>
-                        <li className="hover:bg-gray-100">
+                        <li className="hover:bg-gray-50">
                           <Link
                             to={`/Cart/${user.id}`}
-                            className="block px-4 py-2"
+                            className="block px-4 py-2 text-gray-700 hover:text-gray-900"
                             onClick={() => setIsSubMenuOpen(false)}
                           >
-                            Xem Giỏ hàng
+                            Giỏ hàng
                           </Link>
                         </li>
-                        <li className="hover:bg-gray-100">
+                        <li className="hover:bg-gray-50">
                           <Link
                             to="/donhang"
-                            className="block px-4 py-2"
+                            className="block px-4 py-2 text-gray-700 hover:text-gray-900"
                             onClick={() => setIsSubMenuOpen(false)}
                           >
-                            Xem Đơn hàng
+                            Đơn hàng
                           </Link>
                         </li>
                       </>
                     )}
-                  <li className="hover:bg-gray-100">
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsSubMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2"
-                    >
-                      Đăng xuất
-                    </button>
-                  </li>
-                </ul>
-              )}
-            </div>
-          ) : (
-            <>
-              <Link to={"/login"}>
-                <div className="flex">
-                  <img
-                    className="scale-[0.9] pl-[30px] pr-[10px]"
-                    src={nguoi}
-                    alt=""
-                  />
+                    <li className="hover:bg-gray-50">
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsSubMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-gray-700 hover:text-gray-900"
+                      >
+                        Đăng xuất
+                      </button>
+                    </li>
+                  </ul>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                >
+                  <img src={nguoi} alt="Login" className="w-6 h-6 mr-2" />
                   Đăng nhập
-                </div>
-              </Link>
-              <Link to={"/register"}>
-                <div className="flex">
-                  <img
-                    className="scale-[0.9] pl-[30px] pr-[10px]"
-                    src={nguoi}
-                    alt=""
-                  />
+                </Link>
+                <Link
+                  to="/register"
+                  className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                >
+                  <img src={nguoi} alt="Register" className="w-6 h-6 mr-2" />
                   Đăng ký
-                </div>
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="down flex justify-between border-y-2 py-[12px] border-black pr-[10px]">
-      <Link
-              to="/"
-              className="hover:scale-110 transition-transform duration-300 uppercase inline-block"
-            >
-        <img className="h-24 pl-[40px]" src={logo} alt="" />
-        </Link>
-        <div className="right flex pl-[30px]">
-          <div className="text flex gap-14 pt-[25px] pr-[100px] text-lg">
-            <Link
-              to="/"
-              className="hover:scale-110 transition-transform duration-300 border-black hover:border-b-2 uppercase inline-block"
-            >
-              Trang chủ
-            </Link>
-
-            <NavLink
-              to="/products"
-              className="hover:scale-110 transition-transform duration-300 border-black hover:border-b-2 uppercase inline-block"
-            >
-              Sản phẩm
-            </NavLink>
-
-            <NavLink
-              to="/tintuc"
-              className="hover:scale-110 transition-transform duration-300 border-black hover:border-b-2 uppercase inline-block"
-            >
-              Tin tức
-            </NavLink>
-
-            <NavLink
-              to="/gioithieu"
-              className="hover:scale-110 transition-transform duration-300 border-black hover:border-b-2 uppercase inline-block"
-            >
-              Giới thiệu
-            </NavLink>
-
+                </Link>
+              </>
+            )}
           </div>
+        </div>
 
-          <div className="search px-[30px] pt-[23px]">
+        {/* Bottom Section */}
+        <div className="flex items-center justify-between py-4">
+          {/* Logo */}
+          <Link to="/" className="flex items-center">
+            <img
+              src={logo}
+              alt="Logo"
+              className="h-16 transition-transform duration-300 hover:scale-105"
+            />
+          </Link>
+
+          {/* Navigation and Search */}
+          <div className="flex items-center space-x-8">
+            {/* Navigation Links */}
+            <nav className="hidden lg:flex space-x-8">
+              <NavLink
+                to="/"
+                className={({ isActive }) =>
+                  `text-gray-800 font-medium text-lg uppercase tracking-wide transition-all duration-200 ${
+                    isActive
+                      ? "border-b-2 border-gray-900"
+                      : "hover:border-b-2 hover:border-gray-900"
+                  }`
+                }
+              >
+                Trang chủ
+              </NavLink>
+              <NavLink
+                to="/products"
+                className={({ isActive }) =>
+                  `text-gray-800 font-medium text-lg uppercase tracking-wide transition-all duration-200 ${
+                    isActive
+                      ? "border-b-2 border-gray-900"
+                      : "hover:border-b-2 hover:border-gray-900"
+                  }`
+                }
+              >
+                Sản phẩm
+              </NavLink>
+              <NavLink
+                to="/tintuc"
+                className={({ isActive }) =>
+                  `text-gray-800 font-medium text-lg uppercase tracking-wide transition-all duration-200 ${
+                    isActive
+                      ? "border-b-2 border-gray-900"
+                      : "hover:border-b-2 hover:border-gray-900"
+                  }`
+                }
+              >
+                Tin tức
+              </NavLink>
+              <NavLink
+                to="/gioithieu"
+                className={({ isActive }) =>
+                  `text-gray-800 font-medium text-lg uppercase tracking-wide transition-all duration-200 ${
+                    isActive
+                      ? "border-b-2 border-gray-900"
+                      : "hover:border-b-2 hover:border-gray-900"
+                  }`
+                }
+              >
+                Giới thiệu
+              </NavLink>
+            </nav>
+
+            {/* Search Bar */}
             <div className="relative">
               <input
                 type="text"
-                className="p-2 pl-8 rounded border border-gray-200 bg-gray-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:border-transparent"
-                placeholder="Tìm kiếm..."
+                className="w-64 pl-10 pr-4 py-2 rounded-full border border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200"
+                placeholder="Tìm kiếm sản phẩm..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearchClick()}
               />
               <svg
-                className="w-4 h-4 absolute right-[10px] top-3.5"
+                className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -286,7 +275,7 @@ const Header = () => {
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 

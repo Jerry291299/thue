@@ -126,15 +126,4 @@ export const getOrderById = async (orderId: string) => {
   }
 };
 
-// Hàm lấy chi tiết đơn hàng theo ID
-// export const getOrderById = async (orderId: string): Promise<Order> => {
-//   const response = await fetch(`http://localhost:28017/api/orders/${orderId}`);
-//   if (!response.ok) {
-//     throw new Error('Không thể lấy thông tin đơn hàng.');
-//   }
-//   return response.json();
-// };
-
-
-// Nếu bạn có thêm các API khác, bạn có thể định nghĩa thêm các hàm ở đây
 

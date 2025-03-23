@@ -1,12 +1,8 @@
 import React, { useContext, useEffect, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
-
 import { IUser } from "../interface/user";
 import { addtoCart } from "../service/cart";
-import {
-  getAllproducts,
-  getProductByID,
-} from "../service/products";
+import { getAllproducts, getProductByID } from "../service/products";
 import Header from "./Header";
 import Footer from "./Footer";
 import { actions, Cartcontext } from "./contexts/cartcontext";
@@ -15,7 +11,6 @@ import CommentSection from "../components/CommentProduct";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Update interfaces to match your new schema
 interface ISubVariant {
   specification: string;
   value: string;
@@ -59,7 +54,6 @@ const ProductDetail = () => {
   const [user, setUser] = useState<IUser | null>(null);
   const dispatch = Globalstate.dispatch;
 
-  // Fetch user info
   useEffect(() => {
     const storedUser = sessionStorage.getItem("user");
     if (storedUser) {
@@ -68,7 +62,6 @@ const ProductDetail = () => {
     }
   }, []);
 
-  // Fetch product details
   useEffect(() => {
     const fetchProductData = async () => {
       try {
@@ -91,7 +84,6 @@ const ProductDetail = () => {
     fetchProductData();
   }, [id]);
 
-  // Fetch related products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -107,10 +99,9 @@ const ProductDetail = () => {
     fetchProducts();
   }, []);
 
-  // Handle variant and sub-variant changes
   const handleVariantChange = (index: number) => {
     setSelectedVariant(index);
-    setSelectedSubVariant(0); // Reset sub-variant selection
+    setSelectedSubVariant(0);
     if (product && product.img && product.img[index]) {
       setSelectedImage(product.img[index]);
     }
@@ -129,8 +120,7 @@ const ProductDetail = () => {
     const variantIndex = product.variants.findIndex((v) => v.color === color);
     if (variantIndex !== -1) {
       setSelectedVariant(variantIndex);
-      setSelectedSubVariant(0); // Reset sub-variant selection
-      setSelectedImage(product.img?.[variantIndex] || null);
+      setSelectedSubVariant(0);
     }
   };
 
@@ -157,16 +147,16 @@ const ProductDetail = () => {
     <>
       <Header />
       <ToastContainer />
-      <div className="container mx-auto w-[1400px] pt-[100px]">
+      <div className="max-w-7xl mx-auto pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         {product && (
-          <div className="container mx-auto w-[1300px] flex">
-            {/* Small images */}
-            <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Small Images */}
+            <div className="flex flex-col gap-4 lg:col-span-2">
               {Array.isArray(product.img) &&
                 product.img.map((image, index) => (
                   <img
                     key={index}
-                    className={`w-[150px] h-[150px] object-cover rounded-lg border ${selectedImage === image ? "border-blue-500" : "border-gray-200"} cursor-pointer`}
+                    className={`w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border ${selectedImage === image ? "border-blue-500 shadow-md" : "border-gray-200"} cursor-pointer hover:shadow-lg transition-shadow duration-200`}
                     src={image}
                     alt={`Product image ${index + 1}`}
                     onClick={() => setSelectedImage(image)}
@@ -174,49 +164,48 @@ const ProductDetail = () => {
                 ))}
             </div>
 
-            {/* Large image */}
-            <div className="ml-[40px] mr-[30px]">
+            {/* Large Image */}
+            <div className="lg:col-span-6">
               {selectedImage && (
                 <img
-                  className="w-[690px] h-[690px] object-cover rounded-lg border border-gray-200"
+                  className="w-full max-w-[700px] h-auto rounded-lg border border-gray-200 shadow-md mx-auto"
                   src={selectedImage}
                   alt={product.name}
                 />
               )}
             </div>
 
-            {/* Product info */}
-            <div className="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-md">
-              <h1 className="text-xl font-bold text-black-800">{product.name}</h1>
+            {/* Product Info */}
+            <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-4">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">{product.name}</h1>
 
-            
-
-              {/* Color selection */}
+              {/* Color Selection */}
               {product.variants && product.variants.length > 0 && (
                 <div className="my-4">
-                  <h2 className="text-lg font-medium">Màu sắc:</h2>
-                  <div className="flex gap-4">
+                  <h2 className="text-lg font-semibold text-gray-700 mb-2">Màu sắc:</h2>
+                  <div className="flex gap-3 flex-wrap">
                     {Array.from(new Set(product.variants.map((v) => v.color))).map((color, index) => (
                       <button
                         key={index}
-                        className={`w-10 h-10 rounded-full border-2 ${selectedColor === color ? "border-blue-500" : "border-gray-300"}`}
+                        className={`w-10 h-10 rounded-full border-2 ${selectedColor === color ? "border-blue-500 ring-2 ring-blue-300" : "border-gray-300"} hover:shadow-md transition-all duration-200`}
                         style={{ backgroundColor: color.toLowerCase() }}
                         onClick={() => handleColorChange(color)}
-                      ></button>
+                        aria-label={`Chọn màu ${color}`}
+                      />
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Sub-variant selection */}
+              {/* Sub-variant Selection */}
               {selectedVariant !== null && product.variants && product.variants[selectedVariant]?.subVariants.length > 0 && (
                 <div className="my-4">
-                  <h2 className="text-lg font-medium">Tùy chọn:</h2>
-                  <div className="flex gap-4 overflow-x-auto">
+                  <h2 className="text-lg font-semibold text-gray-700 mb-2">Tùy chọn:</h2>
+                  <div className="flex gap-3 flex-wrap">
                     {product.variants[selectedVariant].subVariants.map((subVariant, index) => (
                       <button
                         key={index}
-                        className={`px-4 py-2 rounded-md ${selectedSubVariant === index ? "bg-blue-200" : "bg-white text-black"}`}
+                        className={`px-4 py-2 rounded-lg border ${selectedSubVariant === index ? "bg-blue-100 border-blue-500 text-blue-700" : "bg-white border-gray-300 text-gray-700"} hover:bg-blue-50 transition-colors duration-200`}
                         onClick={() => handleSubVariantChange(index)}
                         aria-pressed={selectedSubVariant === index}
                       >
@@ -228,27 +217,27 @@ const ProductDetail = () => {
               )}
 
               {/* Price and Quantity */}
-              <div className="my-4">
-                <div className="flex items-baseline">
-                  <span className="text-xl font-semibold text-red-600">
-                    {"Giảm giá: "}
+              <div className="my-6 space-y-2">
+                <p className="text-lg text-gray-700">
+                  <span className="font-semibold">Giảm giá:</span>{" "}
+                  <span className="text-red-600 font-bold">
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
                       product.variants && selectedVariant !== null ? product.variants[selectedVariant].discount || 0 : 0
                     )}
                   </span>
-                </div>
-                <div className="flex items-baseline">
-                  <span className="text-2xl font-semibold text-black-600">
-                    {"Giá: "}
+                </p>
+                <p className="text-lg text-gray-700">
+                  <span className="font-semibold">Giá:</span>{" "}
+                  <span className="text-2xl font-bold text-gray-800">
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
                       product.variants && selectedVariant !== null && selectedSubVariant !== null
                         ? calculateTotalPrice(product.variants[selectedVariant], selectedSubVariant)
                         : 0
                     )}
                   </span>
-                </div>
-                <p className="font-bold text-gray-600">
-                  Số lượng:{" "}
+                </p>
+                <p className="text-lg text-gray-700">
+                  <span className="font-semibold">Số lượng:</span>{" "}
                   <span
                     className={`font-semibold ${calculateTotalQuantity(product.variants, selectedVariant, selectedSubVariant) > 0 ? "text-green-600" : "text-red-600"}`}
                   >
@@ -257,8 +246,8 @@ const ProductDetail = () => {
                       : "Hết hàng"}
                   </span>
                 </p>
-                <p className="font-bold text-gray-500 mt-2">
-                  Tình trạng:{" "}
+                <p className="text-lg text-gray-700">
+                  <span className="font-semibold">Tình trạng:</span>{" "}
                   <span
                     className={`font-semibold ${calculateTotalQuantity(product.variants, selectedVariant, selectedSubVariant) > 0 ? "text-green-600" : "text-red-600"}`}
                   >
@@ -270,9 +259,9 @@ const ProductDetail = () => {
               {/* Add to Cart Button */}
               <button
                 type="button"
-                className={`inline-flex items-center justify-center rounded-md border-2 border-transparent px-12 py-3 text-center text-base font-bold text-white transition-all duration-200 ease-in-out ${
+                className={`w-full py-3 rounded-lg text-white font-semibold text-lg transition-all duration-200 ${
                   calculateTotalQuantity(product.variants, selectedVariant, selectedSubVariant) > 0
-                    ? "bg-gray-900 hover:bg-orange-400"
+                    ? "bg-gray-900 hover:bg-orange-500"
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
                 onClick={async () => {
@@ -324,43 +313,49 @@ const ProductDetail = () => {
                 }}
                 disabled={calculateTotalQuantity(product.variants, selectedVariant, selectedSubVariant) <= 0}
               >
-                {calculateTotalQuantity(product.variants, selectedVariant, selectedSubVariant) > 0 ? "Add to cart" : "Out of Stock"}
+                {calculateTotalQuantity(product.variants, selectedVariant, selectedSubVariant) > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
               </button>
             </div>
           </div>
         )}
 
-        {/* Product description */}
-        <div>
+        {/* Product Description */}
+        <div className="mt-12 bg-white p-8 rounded-lg shadow-md">
           {product && (
-            <div className="my-6 p-6 bg-gray-100 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold text-black mb-4">Mô tả sản phẩm</h2>
+            <>
+              <h2 className="text-3xl font-bold text-gray-800 mb-6">Mô tả sản phẩm</h2>
               {product.moTa ? (
-                <div className="text-gray-800 text-base leading-relaxed">
-                  <div className="img flex gap-2">
-                    <img className="w-[50%]" src={product.img[2]} alt="" />
-                    <img className="w-[50%]" src={product.img[3]} alt="" />
+                <div className="text-gray-700 text-lg leading-relaxed">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <img
+                      className="w-full object-cover rounded-lg shadow-sm"
+                      src={product.img[0]}
+                      alt="Product description image 1"
+                    />
+                    <img
+                      className="w-full object-cover rounded-lg shadow-sm"
+                      src={product.img[1]}
+                      alt="Product description image 2"
+                    />
                   </div>
-                  <div className="mota">{product.moTa}</div>
+                  <p className="mt-4">{product.moTa}</p>
                 </div>
               ) : (
-                <p className="text-gray-500 italic">Chưa có mô tả cho sản phẩm này.</p>
+                <p className="text-gray-500 italic text-lg">Chưa có mô tả cho sản phẩm này.</p>
               )}
-            </div>
+            </>
           )}
         </div>
 
         {/* Warranty and Shipping */}
-        <div className="bg-gray-100 p-6 rounded-lg shadow-md mt-8">
-          <div className="text-center">
-            <h2 className="text-xl font-bold mb-4 uppercase tracking-wider text-blue-600">
-              Chính Sách Bảo Hành & Vận Chuyển - Click Mobile
-            </h2>
-          </div>
+        <div className="mt-12 bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-blue-600 mb-4 text-center uppercase tracking-wider">
+            Chính Sách Bảo Hành & Vận Chuyển - Click Mobile
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">Bảo Hành</h3>
-              <ul className="list-disc list-inside text-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Bảo Hành</h3>
+              <ul className="list-disc pl-5 text-gray-700 space-y-2">
                 <li>Tất cả sản phẩm tại Click Mobile đều là hàng chính hãng, được kiểm định chất lượng trước khi đến tay khách hàng.</li>
                 <li>Click Mobile áp dụng chính sách bảo hành từ 6 tháng đến 12 tháng tùy theo từng sản phẩm.</li>
                 <li>Nếu sản phẩm gặp lỗi kỹ thuật do nhà sản xuất, khách hàng có thể liên hệ ngay với Click Mobile để được hỗ trợ sửa chữa hoặc đổi mới.</li>
@@ -369,8 +364,8 @@ const ProductDetail = () => {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-2">Vận Chuyển</h3>
-              <ul className="list-disc list-inside text-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Vận Chuyển</h3>
+              <ul className="list-disc pl-5 text-gray-700 space-y-2">
                 <li>Click Mobile hỗ trợ giao hàng toàn quốc với nhiều hình thức vận chuyển linh hoạt.</li>
                 <li>Miễn phí giao hàng trong khu vực nội thành TP. Hà Nội với đơn hàng trên 2 triệu VNĐ.</li>
                 <li>Đối với các tỉnh thành khác, phí vận chuyển sẽ được tính theo bảng giá của đơn vị vận chuyển.</li>
@@ -380,19 +375,18 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Similar products */}
-        <div className="border-t-2 border-black mt-[40px]"></div>
-        <section className="py-10">
-          <h1 className="mb-12 text-center font-sans text-4xl font-bold">Sản phẩm tương tự</h1>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-8 mt-[30px] mb-[50px] px-[20px] md:px-[40px] lg:px-[60px]">
+        {/* Similar Products */}
+        <div className="mt-12">
+          <h1 className="text-3xl font-bold text-gray-800 text-center mb-8">Sản phẩm tương tự</h1>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.slice(0, 8).map((product: Iproduct) => (
-              <article key={product._id} className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-all">
+              <article key={product._id} className="bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
                 <NavLink to={`/product/${product._id}`}>
                   <img src={product.img[0]} alt={product.name} className="h-56 w-full object-cover rounded-t-lg" />
                   <div className="p-4">
-                    <h2 className="text-lg font-serif mb-2">{product.name}</h2>
-                    <p className="text-sm text-gray-500">{truncateText(product.moTa, 50)}</p>
-                    <p className="text-xl font-bold text-red-600">
+                    <h2 className="text-lg font-semibold text-gray-800 mb-2">{product.name}</h2>
+                    <p className="text-sm text-gray-600">{truncateText(product.moTa, 50)}</p>
+                    <p className="text-xl font-bold text-red-600 mt-2">
                       {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
                         product.variants && product.variants.length > 0
                           ? product.variants[0].basePrice + (product.variants[0].subVariants[0]?.additionalPrice || 0)
@@ -401,16 +395,23 @@ const ProductDetail = () => {
                     </p>
                   </div>
                   <div className="p-4">
-                    <button className="w-full py-2 text-center bg-gray-100 rounded-lg hover:bg-gray-200">View Details</button>
+                    <button className="w-full py-2 bg-gray-100 text-gray-800 font-semibold rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                      Xem chi tiết
+                    </button>
                   </div>
                 </NavLink>
               </article>
             ))}
           </div>
-        </section>
+        </div>
 
-        <div className="pt-[50px]">
-          {user ? <CommentSection productId={id || ""} user={user} /> : <p className="text-gray-500">Bạn cần đăng nhập để bình luận.</p>}
+        {/* Comments */}
+        <div className="mt-12">
+          {user ? (
+            <CommentSection productId={id || ""} user={user} />
+          ) : (
+            <p className="text-gray-500 text-center">Bạn cần đăng nhập để bình luận.</p>
+          )}
         </div>
       </div>
       <Footer />
