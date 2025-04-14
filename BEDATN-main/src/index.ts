@@ -1591,6 +1591,12 @@ app.post("/order/confirmvnpay", async (req: Request, res: Response) => {
     }
 
     if (vnp_ResponseCode !== "00") {
+      // const updatedOrder = await Order.findOneAndUpdate(
+      //   { userId, status: "pending" },
+      //   {paymentMethod: "Thanh toán khi nhận hàng"},
+      //   { paymentstatus: "Chưa Thanh toán", magiaodich: vnp_TransactionNo },
+      //   { new: true, sort: { createdAt: -1 } }
+      // );
       return res.status(400).json({ message: "thanh toán thất bại" });
     }
 

@@ -3,22 +3,27 @@ import banner1 from "./img/banner mini1.png";
 import banner2 from "./img/bannermini2.png";
 import banner3 from "./img/banner3.png";
 import { NavLink } from "react-router-dom";
-import { Iproduct } from "../interface/products"; // Giả sử bạn đã định nghĩa interface Iproduct
-import { getAllproducts } from "../service/products"; // Hàm gọi API để lấy danh sách sản phẩm
+import { Iproduct } from "../interface/products";
+import { getAllproducts } from "../service/products";
 
 type Props = {};
 
 const Content = (props: Props) => {
-  const [products, setProducts] = useState<Iproduct[]>([]); // Dữ liệu sản phẩm
-  const [loading, setLoading] = useState<boolean>(true); // Trạng thái loading
+  const [products, setProducts] = useState<Iproduct[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const sanpham = await getAllproducts({ limit: 12, page: 1 });
-        setProducts(sanpham.docs || []);
-        console.log(sanpham.docs, "day");
+        // Sort products by createdAt in descending order (newest first)
+        const sortedProducts = (sanpham.docs || []).sort(
+          (a: Iproduct, b: Iproduct) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setProducts(sortedProducts);
+        console.log(sortedProducts, "sorted products");
       } catch (error) {
         console.log(error);
       } finally {
@@ -44,7 +49,7 @@ const Content = (props: Props) => {
       <div className="pb-[30px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mt-8 px-4 md:px-8 lg:px-16">
         {products
           .filter((product: Iproduct) => product.status) // Lọc sản phẩm active
-          .slice(0, 12) // Hiển thị tối đa 8 sản phẩm
+          .slice(0, 12) // Hiển thị tối đa 12 sản phẩm
           .map((product: Iproduct) => (
             <article
               key={product._id}
@@ -92,19 +97,19 @@ const Content = (props: Props) => {
       </div>
 
       <div className="bannermini flex gap-2">
-  <div className="banner1 flex-1">
-    <img src={banner1} alt="" className="w-full h-full object-cover" />
-  </div>
-  <div className="banner2 flex-1">
-    <img src={banner2} alt="" className="w-full h-full object-cover" />
-  </div>
-</div>
+        <div className="banner1 flex-1">
+          <img src={banner1} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="banner2 flex-1">
+          <img src={banner2} alt="" className="w-full h-full object-cover" />
+        </div>
+      </div>
 
-<div className="bannerbot pt-[20px]">
-<div className="banner1 flex-1">
-    <img src={banner3} alt="" className="w-full h-full " />
-  </div>
-</div>
+      <div className="bannerbot pt-[20px]">
+        <div className="banner1 flex-1">
+          <img src={banner3} alt="" className="w-full h-full" />
+        </div>
+      </div>
     </>
   );
 };
